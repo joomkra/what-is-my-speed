@@ -84,3 +84,7 @@ npm run dev   # data goes to ./data, served on :3000
 | GET/PUT | `/api/settings` | Thresholds, retention, timeout, pause |
 | GET | `/api/events` | SSE stream: `state`, `progress`, `measurement`, `profiles` |
 | GET | `/api/health` | Health check (no auth) |
+
+## License
+
+MIT. See [LICENSE](LICENSE).

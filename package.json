@@ -1,6 +1,6 @@
 {
   "name": "what-is-my-speed",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Self-hosted multi-profile, multi-server speed monitor powered by the Ookla Speedtest CLI",
   "main": "src/server.js",
   "type": "module",
@@ -9,8 +9,11 @@
     "start": "node --disable-warning=ExperimentalWarning src/server.js",
     "dev": "DATA_DIR=./data node --watch --disable-warning=ExperimentalWarning src/server.js"
   },
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "dependencies": {
     "chart.js": "4.4.7"
-  }
+  },
+  "license": "MIT"
 }
