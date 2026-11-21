@@ -289,6 +289,24 @@ input[type='color'] { width: 42px; height: 36px; border: 1px solid var(--border-
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .threshold-row { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 10px; align-items: center; }
 
+/* ---------- footer ---------- */
+.foot { max-width: 1240px; margin: -40px auto 0; padding: 0 24px 40px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 12.5px; color: var(--text-3); }
+.foot a { color: inherit; }
+.foot a:hover { color: var(--text); }
+#versionLink { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); }
+.foot .bmc { flex-basis: 100%; display: flex; justify-content: center; margin-top: 6px; }
+.foot .bmc img { height: 40px; width: auto; display: block; transition: transform 0.15s; }
+.foot .bmc:hover img { transform: translateY(-1px); }
+.vdot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); flex: none; }
+.vdot.current { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+.vdot.outdated { background: var(--fair); box-shadow: 0 0 0 3px var(--fair-soft); }
+
+/* ---------- Ookla notice ---------- */
+.notice-modal { max-width: 520px; }
+.notice-modal .modal-body { gap: 12px; line-height: 1.55; color: var(--text-2); }
+.notice-modal .modal-body p { margin: 0; }
+.notice-links { display: flex; gap: 10px; flex-wrap: wrap; }
+
 @media (max-width: 1000px) {
   .stats { grid-template-columns: 1fr; }
   .mini-stats { grid-template-columns: repeat(2, 1fr); }

@@ -90,6 +90,7 @@ export const DEFAULT_SETTINGS = {
   pingGood: 30,
   pingFair: 80,
   pauseAll: false,
+  ooklaNoticeAcknowledged: false,
 };
 
 export function getSettings() {

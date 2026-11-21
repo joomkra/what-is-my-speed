@@ -1,6 +1,6 @@
 {
   "name": "what-is-my-speed",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Self-hosted multi-profile, multi-server speed monitor powered by the Ookla Speedtest CLI",
   "main": "src/server.js",
   "type": "module",

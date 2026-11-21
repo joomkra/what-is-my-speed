@@ -875,6 +875,50 @@ function connectEvents() {
   es.addEventListener('settings', (e) => { state.settings = JSON.parse(e.data); renderRunner(); });
 }
 
+// ============================================================ Ookla notice & version
+function showOoklaNotice() {
+  const root = $('#modalRoot');
+  root.innerHTML = `<div class="modal-bg"><div class="modal notice-modal" role="alertdialog" aria-modal="true" aria-labelledby="noticeTitle">
+    <div class="modal-head"><h2 id="noticeTitle">Before you start</h2></div>
+    <div class="modal-body">
+      <p>This container runs the official <b>Ookla Speedtest CLI</b>. By using it, you accept Ookla's
+      End User License Agreement and Privacy Policy.</p>
+      <p>Each test sends data such as your IP address to Ookla, and Ookla may store the results.</p>
+      <div class="notice-links">
+        <a class="btn sm" href="https://www.speedtest.net/about/eula" target="_blank" rel="noopener">Ookla EULA ↗</a>
+        <a class="btn sm" href="https://www.speedtest.net/about/privacy" target="_blank" rel="noopener">Ookla Privacy Policy ↗</a>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn primary" id="noticeAck">I understand</button></div>
+  </div></div>`;
+  $('#noticeAck').addEventListener('click', async () => {
+    try {
+      state.settings = await api('/api/settings', { method: 'PUT', body: { ooklaNoticeAcknowledged: true } });
+      root.innerHTML = '';
+    } catch (e) { toast(e.message, 'error'); }
+  });
+  $('#noticeAck').focus();
+}
+
+async function loadVersion() {
+  try {
+    const quick = await api('/api/version?quick=1');
+    $('#versionText').textContent = `WhatIsMySpeed v${quick.current}`;
+    const v = quick.status === 'checking' ? await api('/api/version') : quick;
+    const dot = $('#versionDot');
+    dot.className = `vdot ${v.status === 'current' || v.status === 'outdated' ? v.status : ''}`;
+    $('#versionText').textContent = `WhatIsMySpeed v${v.current}`;
+    const link = $('#versionLink');
+    link.href = v.url;
+    link.title = {
+      current: 'You are running the latest version',
+      outdated: `Version ${v.latest} is available. Click to see what's new`,
+      disabled: 'Update check is disabled',
+    }[v.status] || `Couldn't check for updates${v.error ? ` (${v.error})` : ''}`;
+    if (v.status === 'outdated') $('#versionText').textContent += ` → v${v.latest} available`;
+  } catch { /* footer stays neutral */ }
+}
+
 async function init() {
   const [settings] = await Promise.all([api('/api/settings'), loadProfiles(), loadSaved()]);
   state.settings = settings;
@@ -883,6 +927,8 @@ async function init() {
   // drop stale profile selections
   for (const id of [...state.selected]) if (!state.profiles.some((p) => p.id === id)) state.selected.delete(id);
   connectEvents();
+  loadVersion();
+  if (!settings.ooklaNoticeAcknowledged) showOoklaNotice();
   const v = location.hash.slice(1);
   showView(['profiles', 'servers', 'settings'].includes(v) ? v : 'dashboard');
   // keep relative times & next-run countdowns fresh

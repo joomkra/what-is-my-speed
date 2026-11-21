@@ -13,6 +13,43 @@ const CHART_JS = path.join(__dirname, '..', 'node_modules', 'chart.js', 'dist', 
 const PORT = Number(process.env.PORT) || 3000;
 const AUTH_USER = process.env.AUTH_USER || '';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || '';
+const VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version;
+const UPDATE_REPO = process.env.UPDATE_CHECK_REPO || 'joomkra/what-is-my-speed';
+const UPDATE_CHECK = !/^(0|false|no|off)$/i.test(process.env.UPDATE_CHECK || 'true');
+const OOKLA_EULA_URL = 'https://www.speedtest.net/about/eula';
+const OOKLA_PRIVACY_URL = 'https://www.speedtest.net/about/privacy';
+
+// ---------- update check (latest v* tag on GitHub, cached 6h) ----------
+const parseVer = (v) => (String(v).match(/^v?(\d+)\.(\d+)\.(\d+)$/) || []).slice(1).map(Number);
+function cmpVer(a, b) {
+  const x = parseVer(a); const y = parseVer(b);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+  return 0;
+}
+let updateCache = { at: 0, data: null };
+async function getVersionInfo() {
+  const base = { current: VERSION, repo: UPDATE_REPO, url: `https://github.com/${UPDATE_REPO}` };
+  if (!UPDATE_CHECK) return { ...base, status: 'disabled' };
+  if (updateCache.data && Date.now() - updateCache.at < 6 * 3600e3) return updateCache.data;
+  let data;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/tags?per_page=100`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': `what-is-my-speed/${VERSION}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
+    const tags = (await res.json()).map((t) => t.name).filter((n) => parseVer(n).length === 3);
+    const latest = tags.sort(cmpVer).pop();
+    if (!latest) throw new Error('no version tags found');
+    const outdated = cmpVer(latest, VERSION) > 0;
+    data = { ...base, latest: latest.replace(/^v/, ''), status: outdated ? 'outdated' : 'current', url: outdated ? `${base.url}/releases/tag/${latest}` : base.url };
+  } catch (e) {
+    data = { ...base, status: 'unknown', error: e.message };
+  }
+  // retry failures sooner than successes
+  updateCache = { at: data.status === 'unknown' ? Date.now() - 5.5 * 3600e3 : Date.now(), data };
+  return data;
+}
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
@@ -83,6 +120,11 @@ async function api(req, res, url) {
     return;
   }
   if (p === '/api/state' && m === 'GET') return send(res, 200, runner.getState());
+  if (p === '/api/version' && m === 'GET') {
+    // ?quick=1 answers right away with the running version (no network wait)
+    if (q.quick === '1' && !updateCache.data) return send(res, 200, { current: VERSION, status: 'checking', url: `https://github.com/${UPDATE_REPO}` });
+    return send(res, 200, await getVersionInfo());
+  }
 
   // profiles
   if (p === '/api/profiles' && m === 'GET') return send(res, 200, profilesWithMeta());
@@ -217,6 +259,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+console.log(`What Is My Speed v${VERSION}`);
+console.log(`NOTICE: this container runs the Ookla Speedtest CLI. By using it you accept Ookla's EULA (${OOKLA_EULA_URL}) and Privacy Policy (${OOKLA_PRIVACY_URL}).`);
 scheduler.start();
 server.listen(PORT, () => console.log(`Speed monitor listening on :${PORT}${AUTH_PASSWORD ? ' (basic auth enabled)' : ''}`));
 

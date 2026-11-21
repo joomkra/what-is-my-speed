@@ -40,13 +40,15 @@ Data, including the SQLite DB and Ookla's license acceptance, is stored in `./da
 | `AUTH_USER` / `AUTH_PASSWORD` | – | Enables HTTP basic auth when a password is set (user defaults to `admin`) |
 | `DEFAULT_INTERVAL_MINUTES` | `30` | Interval of the profile created on first boot |
 | `DATA_DIR` | `/data` | Database location |
+| `UPDATE_CHECK` | `true` | Look up the newest `v*` tag on GitHub (cached for 6h). The footer dot turns green when you're up to date and orange when a newer version exists |
+| `UPDATE_CHECK_REPO` | `joomkra/what-is-my-speed` | Repository used for the update check |
 
 **Interface binding:** in Docker, the profile's interface and source-IP options only see the container's own interfaces. To use host interfaces such as `wg0`, set `network_mode: host` and remove the `ports:` block.
 
 **Architectures:** the image fetches the correct Ookla CLI build for amd64, arm64, armv7 and i386. For example:
 `docker buildx build --platform linux/arm64 -t what-is-my-speed .`
 
-**License:** the container runs the CLI with `--accept-license --accept-gdpr`. By running it, you accept Ookla's [EULA](https://www.speedtest.net/about/eula) and [privacy policy](https://www.speedtest.net/about/privacy).
+**License:** the container runs the CLI with `--accept-license --accept-gdpr`. A one-time notice in the UI and a line in the startup log both say this. By running it, you accept Ookla's [EULA](https://www.speedtest.net/about/eula) and [privacy policy](https://www.speedtest.net/about/privacy).
 
 ### Prebuilt image (GitHub Container Registry)
 
