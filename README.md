@@ -51,11 +51,11 @@ docker run -d --name what-is-my-speed --restart unless-stopped \
 
 ### Unraid
 
-A template is included in [`unraid/what-is-my-speed.xml`](unraid/what-is-my-speed.xml). To install it, open the Unraid terminal (**>_** in the top bar) and run:
+A template is included in [`templates/what-is-my-speed.xml`](templates/what-is-my-speed.xml). To install it, open the Unraid terminal (**>_** in the top bar) and run:
 
 ```bash
 wget -O /boot/config/plugins/dockerMan/templates-user/my-what-is-my-speed.xml \
-  https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/unraid/what-is-my-speed.xml
+  https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/templates/what-is-my-speed.xml
 ```
 
 Then go to **Docker → Add Container**, pick **what-is-my-speed** from the **Template** dropdown, and click **Apply**.

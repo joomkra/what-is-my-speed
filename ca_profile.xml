@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<CommunityApplications>
+  <Profile>Unraid template for What Is My Speed, a self-hosted internet speed monitor that runs the official Ookla Speedtest CLI on a schedule. The template uses the image published from this repository (ghcr.io/joomkra/what-is-my-speed), so it tracks each release directly. Report problems and ask questions in GitHub issues.</Profile>
+  <Icon>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/templates/what-is-my-speed-icon.png</Icon>
+  <WebPage>https://github.com/joomkra/what-is-my-speed</WebPage>
+  <Forum>https://github.com/joomkra/what-is-my-speed/issues</Forum>
+  <DonateLink>https://www.buymeacoffee.com/joomkra</DonateLink>
+  <DonateText>Buy me a coffee</DonateText>
+</CommunityApplications>
