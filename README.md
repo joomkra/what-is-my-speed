@@ -49,6 +49,23 @@ docker run -d --name what-is-my-speed --restart unless-stopped \
   ghcr.io/joomkra/what-is-my-speed:latest
 ```
 
+### Unraid
+
+A template is included in [`unraid/what-is-my-speed.xml`](unraid/what-is-my-speed.xml). To install it, open the Unraid terminal (**>_** in the top bar) and run:
+
+```bash
+wget -O /boot/config/plugins/dockerMan/templates-user/my-what-is-my-speed.xml \
+  https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/unraid/what-is-my-speed.xml
+```
+
+Then go to **Docker → Add Container**, pick **what-is-my-speed** from the **Template** dropdown, and click **Apply**.
+
+- Data is stored in `/mnt/user/appdata/what-is-my-speed`, owned by `nobody:users` (PUID 99 / PGID 100).
+- The WebUI is on port 3000. It's also available from the container's icon menu.
+- Unraid sets the timezone automatically.
+- To require a login, set **Basic auth password**.
+- To update, use **Check for Updates** on the Docker tab, or follow the orange dot in the dashboard footer.
+
 ### Updating
 
 The dot next to the version number at the bottom of the dashboard is green when you're on the newest version and

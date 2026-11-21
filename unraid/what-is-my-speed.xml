@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>what-is-my-speed</Name>
+  <Repository>ghcr.io/joomkra/what-is-my-speed:latest</Repository>
+  <Registry>https://github.com/joomkra/what-is-my-speed/pkgs/container/what-is-my-speed</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/joomkra/what-is-my-speed/issues</Support>
+  <Project>https://github.com/joomkra/what-is-my-speed</Project>
+  <Overview>Self-hosted internet speed monitor that runs the official Ookla Speedtest CLI on a schedule. You can set up several test profiles, each with its own schedule (interval or cron) and server strategy (nearest, fixed, rotate, or every server in a list). Everything is shown on one dashboard with history charts, live test progress, server search and CSV export.[br][br]
+[b]Note:[/b] this container runs the Ookla Speedtest CLI. By using it, you accept Ookla's EULA (https://www.speedtest.net/about/eula) and Privacy Policy (https://www.speedtest.net/about/privacy).[br][br]
+To bind tests to a specific host interface (for example a VPN), set Network Type to "host". The WebUI then listens on port 3000 of the server.</Overview>
+  <Category>Network:Other Tools: Status:Stable</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/unraid/what-is-my-speed.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/unraid/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <Requires/>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port for the web dashboard." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/what-is-my-speed" Mode="rw" Description="Database and settings." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/what-is-my-speed</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID that owns the files in the data folder (Unraid default: 99 = nobody)." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID that owns the files in the data folder (Unraid default: 100 = users)." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="Basic auth user" Target="AUTH_USER" Default="admin" Mode="" Description="Username for the optional login prompt. Only used when a password is set." Type="Variable" Display="advanced" Required="false" Mask="false">admin</Config>
+  <Config Name="Basic auth password" Target="AUTH_PASSWORD" Default="" Mode="" Description="Set a password to require a login for the dashboard. Leave empty for no login." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Default interval (minutes)" Target="DEFAULT_INTERVAL_MINUTES" Default="30" Mode="" Description="Interval of the 'Auto (nearest)' profile created on first start. Change it later in the Profiles tab." Type="Variable" Display="advanced" Required="false" Mask="false">30</Config>
+  <Config Name="Update check" Target="UPDATE_CHECK" Default="true|false" Mode="" Description="Check GitHub for new versions. The dot next to the version in the footer turns orange when an update is available." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+</Container>
