@@ -1,0 +1,20 @@
+services:
+  speedtest:
+    build: .
+    image: what-is-my-speed:latest
+    container_name: what-is-my-speed
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      PUID: 1000                    # owner of files in ./data
+      PGID: 1000
+      TZ: Europe/Warsaw             # cron schedules & logs use this timezone
+      # AUTH_USER: admin            # optional HTTP basic auth
+      # AUTH_PASSWORD: change-me
+      # DEFAULT_INTERVAL_MINUTES: 30  # interval of the profile created on first boot
+    # To bind tests to specific host interfaces (profile "interface" option),
+    # use host networking instead of the port mapping above:
+    # network_mode: host

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>What Is My Speed</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script>
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="13" stroke="var(--accent)" stroke-width="2.5" />
+          <path d="M16 16 L22 9" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="16" cy="16" r="2.4" fill="var(--accent)" />
+        </svg>
+        <span>WhatIsMySpeed</span>
+      </div>
+      <nav class="tabs" id="nav">
+        <button data-view="dashboard" class="active">Dashboard</button>
+        <button data-view="profiles">Profiles</button>
+        <button data-view="servers">Servers</button>
+        <button data-view="settings">Settings</button>
+      </nav>
+      <div class="top-right">
+        <span class="pill" id="statusPill"><span class="led"></span><span class="ptxt">Idle</span></span>
+        <div class="split" id="runSplit">
+          <button class="btn primary" id="runAllBtn" title="Run all enabled profiles">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16l13-8z" stroke-linejoin="round"/></svg>
+            Run now
+          </button>
+          <button class="btn primary" id="runMenuBtn" aria-label="Choose profile to run">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="menu hidden" id="runMenu"></div>
+        </div>
+        <button class="btn ghost icon" id="themeBtn" title="Toggle theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= DASHBOARD ================= -->
+    <section id="view-dashboard">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Network status</div>
+          <h1>Overview<span class="dot">.</span></h1>
+        </div>
+        <div class="seg" id="rangeSeg">
+          <button data-range="1h">1h</button><button data-range="6h">6h</button><button data-range="24h">24h</button><button data-range="7d">7d</button><button data-range="30d">30d</button><button data-range="90d">90d</button>
+        </div>
+      </div>
+
+      <div class="chips" id="profileChips"></div>
+
+      <div class="card live hidden" id="liveCard">
+        <div>
+          <div class="live-phase" id="livePhase">Starting</div>
+          <div class="live-title" id="liveTitle">—</div>
+          <div class="live-sub" id="liveSub"></div>
+        </div>
+        <div><div class="bar"><div id="liveBar" style="width:0%"></div></div></div>
+        <div class="live-nums">
+          <div><div class="k">Ping</div><div class="v" id="livePing">—</div></div>
+          <div><div class="k">Down</div><div class="v" id="liveDl" style="color:var(--dl)">—</div></div>
+          <div><div class="k">Up</div><div class="v" id="liveUl" style="color:var(--ul)">—</div></div>
+          <button class="btn sm" id="liveCancel">Cancel</button>
+        </div>
+        <div class="live-queue" id="liveQueue"></div>
+      </div>
+
+      <div class="stats">
+        <div class="card stat">
+          <div class="stat-top">
+            <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dl)" stroke-width="2"><path d="M12 4v16m0 0-6-6m6 6 6-6"/></svg>Download</div>
+            <span class="badge none" id="dlBadge">—</span>
+          </div>
+          <div class="stat-value" id="dlValue">—</div>
+          <div class="stat-sub" id="dlSub"></div>
+          <div class="spark"><canvas id="dlSpark"></canvas></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top">
+            <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ul)" stroke-width="2"><path d="M12 20V4m0 0-6 6m6-6 6 6"/></svg>Upload</div>
+            <span class="badge none" id="ulBadge">—</span>
+          </div>
+          <div class="stat-value" id="ulValue">—</div>
+          <div class="stat-sub" id="ulSub"></div>
+          <div class="spark"><canvas id="ulSpark"></canvas></div>
+        </div>
+        <div class="card stat">
+          <div class="stat-top">
+            <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2"><path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 4-5"/></svg>Latency</div>
+            <span class="badge none" id="latBadge">—</span>
+          </div>
+          <div class="stat-value" id="latValue">—</div>
+          <div class="stat-sub" id="latSub">unloaded / loaded</div>
+          <div class="spark"><canvas id="latSpark"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card mini-stats" id="miniStats"></div>
+
+      <div class="card section">
+        <div class="card-head">
+          <div class="card-title">Profiles</div>
+          <button class="btn sm" data-goto="profiles">Manage profiles</button>
+        </div>
+        <div class="card-body table-wrap">
+          <table>
+            <thead><tr><th>Profile</th><th>Schedule</th><th>Servers</th><th>Last result</th><th>Avg (range)</th><th>Success</th><th>Next run</th><th></th></tr></thead>
+            <tbody id="profileRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card section">
+        <div class="card-head">
+          <div class="card-title">History</div>
+          <div class="chart-tools">
+            <div class="seg text" id="chartModeSeg">
+              <button data-mode="overview" class="active">Overview</button>
+              <button data-mode="profile">By profile</button>
+              <button data-mode="server">By server</button>
+            </div>
+            <select class="input hidden" id="chartMetric">
+              <option value="download_mbps">Download</option>
+              <option value="upload_mbps">Upload</option>
+              <option value="ping_ms">Latency (idle)</option>
+              <option value="dl_latency_ms">Latency (loaded)</option>
+              <option value="jitter_ms">Jitter</option>
+              <option value="packet_loss">Packet loss</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="legend" id="chartLegend" style="margin-bottom:14px"></div>
+          <div class="chart-wrap"><canvas id="historyChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card section">
+        <div class="card-head">
+          <div class="card-title">Recent measurements</div>
+          <a class="btn sm" id="exportBtn" href="/api/export.csv" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14"/></svg>Export CSV
+          </a>
+        </div>
+        <div class="card-body">
+          <details class="filters">
+            <summary>Filters</summary>
+            <div class="row">
+              <input class="input" id="fSearch" placeholder="Search server, ISP, profile…" style="flex:1;min-width:200px" />
+              <select class="input" id="fServer"><option value="">All servers</option></select>
+              <select class="input" id="fStatus"><option value="">Any status</option><option value="ok">OK</option><option value="error">Error</option></select>
+              <select class="input" id="fLimit"><option>25</option><option>50</option><option>100</option></select>
+            </div>
+          </details>
+          <div class="table-wrap">
+            <table>
+              <thead><tr id="measHead"></tr></thead>
+              <tbody id="measRows"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <span id="pagerInfo"></span>
+            <div class="inline"><button class="btn sm" id="prevPage">Previous</button><button class="btn sm" id="nextPage">Next</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PROFILES ================= -->
+    <section id="view-profiles" class="hidden">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Test configuration</div>
+          <h1>Profiles<span class="dot">.</span></h1>
+        </div>
+        <button class="btn primary" id="newProfileBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New profile
+        </button>
+      </div>
+      <p class="muted" style="margin:-8px 0 22px;max-width:760px">
+        A profile is an independent test plan: its own schedule (interval or cron), its own server strategy
+        (automatic, one fixed server, rotate through a list, or test every server in a list each run), and optional
+        network interface / source IP binding. Tests from all profiles run one at a time through a shared queue so they never skew each other.
+      </p>
+      <div class="profile-grid" id="profileGrid"></div>
+    </section>
+
+    <!-- ================= SERVERS ================= -->
+    <section id="view-servers" class="hidden">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Server directory</div>
+          <h1>Servers<span class="dot">.</span></h1>
+        </div>
+      </div>
+      <div class="servers-layout">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Find servers</div>
+            <div class="seg text" id="srvSourceSeg">
+              <button data-src="search" class="active">Search directory</button>
+              <button data-src="nearby">Nearest (CLI)</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <form class="inline" id="srvSearchForm" style="margin-bottom:12px">
+              <input class="input" id="srvQuery" placeholder="City, provider, country or server ID…" style="flex:1;min-width:200px" />
+              <button class="btn" type="submit">Search</button>
+            </form>
+            <div id="srvResults"><div class="empty">Search Ookla's server directory by city, sponsor or ID.</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Saved servers</div>
+          </div>
+          <div class="card-body">
+            <form class="inline" id="manualSrvForm" style="margin-bottom:12px">
+              <input class="input" id="manualSrv" placeholder="Add by ID or hostname" style="flex:1;min-width:160px" />
+              <button class="btn" type="submit">Add</button>
+            </form>
+            <div id="savedList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section id="view-settings" class="hidden">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Preferences</div>
+          <h1>Settings<span class="dot">.</span></h1>
+        </div>
+        <button class="btn primary" id="saveSettingsBtn">Save settings</button>
+      </div>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Quality thresholds</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="hint">Used for the Good / Fair / Poor badges and chart point colors.</div>
+            <div class="threshold-row"><span></span><span class="label">Good ≥ / ≤</span><span class="label">Fair ≥ / ≤</span></div>
+            <div class="threshold-row"><span class="label">Download Mbps</span><input class="input" type="number" id="sDlGood" /><input class="input" type="number" id="sDlFair" /></div>
+            <div class="threshold-row"><span class="label">Upload Mbps</span><input class="input" type="number" id="sUlGood" /><input class="input" type="number" id="sUlFair" /></div>
+            <div class="threshold-row"><span class="label">Ping ms (≤)</span><input class="input" type="number" id="sPingGood" /><input class="input" type="number" id="sPingFair" /></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Runner &amp; data</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+            <div class="inline" style="justify-content:space-between">
+              <div><div class="label">Pause all schedules</div><div class="hint">Manual runs still work.</div></div>
+              <label class="toggle"><input type="checkbox" id="sPause" /><span></span></label>
+            </div>
+            <div class="row2">
+              <div class="field"><label for="sTimeout">Test timeout (s)</label><input class="input" type="number" id="sTimeout" min="30" /></div>
+              <div class="field"><label for="sRetention">Keep history (days)</label><input class="input" type="number" id="sRetention" min="0" /><span class="hint">0 = forever</span></div>
+            </div>
+            <div class="field"><label for="sRange">Default dashboard range</label>
+              <select class="input" id="sRange"><option>1h</option><option>6h</option><option>24h</option><option>7d</option><option>30d</option><option>90d</option></select>
+            </div>
+            <div class="inline"><a class="btn" href="/api/export.csv" download>Export all measurements (CSV)</a></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-wrap" id="toasts"></div>
+  <div id="modalRoot"></div>
+
+  <script src="/vendor/chart.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
