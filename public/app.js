@@ -62,6 +62,21 @@ function fmtTick(ts, span) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+// Average points into at most n time buckets so dense or mixed series read as a trend.
+function bucket(pts, n) {
+  if (pts.length <= n * 1.5) return pts;
+  const min = pts[0].x; const w = (pts[pts.length - 1].x - min) / n || 1;
+  const out = []; let cur = null;
+  const flush = () => { if (cur) out.push({ x: cur.sx / cur.n, y: cur.sy / cur.n, n: cur.n }); };
+  for (const p of pts) {
+    const i = Math.min(n - 1, Math.floor((p.x - min) / w));
+    if (!cur || cur.i !== i) { flush(); cur = { i, sx: 0, sy: 0, n: 0 }; }
+    cur.sx += p.x; cur.sy += p.y; cur.n++;
+  }
+  flush();
+  return out;
+}
+
 function grade(kind, v) {
   const s = state.settings;
   if (v == null) return ['none', '—'];
@@ -255,7 +270,7 @@ async function refreshDashboard() {
 function sparkline(id, data, color, key) {
   const ctx = $(`#${id}`);
   charts[id]?.destroy();
-  const pts = data.filter((d) => d[key] != null).map((d) => ({ x: d.ts, y: d[key] }));
+  const pts = bucket(data.filter((d) => d[key] != null).map((d) => ({ x: d.ts, y: d[key] })), 36);
   charts[id] = new Chart(ctx, {
     type: 'line',
     data: {
@@ -393,11 +408,10 @@ function renderHistory() {
 
   if (state.chartMode === 'overview') {
     const dl = css('--dl'); const ul = css('--ul'); const lat = css('--lat');
-    const pingColors = ok.map((d) => { const [g] = grade('ping', d.ping_ms); return g === 'good' ? css('--good') : g === 'fair' ? css('--fair') : css('--poor'); });
     datasets = [
-      { label: 'Download', data: ok.map((d) => ({ x: d.ts, y: d.download_mbps })), borderColor: dl, backgroundColor: areaFill(dl), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
-      { label: 'Upload', data: ok.map((d) => ({ x: d.ts, y: d.upload_mbps })), borderColor: ul, backgroundColor: areaFill(ul), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
-      { label: 'Latency', data: ok.map((d) => ({ x: d.ts, y: d.ping_ms })), borderColor: css('--good'), borderDash: [4, 4], borderWidth: 1.5, tension: 0.35, pointRadius: dense ? 0 : 3, pointBackgroundColor: pingColors, pointBorderWidth: 0, yAxisID: 'y1' },
+      { label: 'Download', data: bucket(ok.map((d) => ({ x: d.ts, y: d.download_mbps })), 160), borderColor: dl, backgroundColor: areaFill(dl), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
+      { label: 'Upload', data: bucket(ok.map((d) => ({ x: d.ts, y: d.upload_mbps })), 160), borderColor: ul, backgroundColor: areaFill(ul), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
+      { label: 'Latency', data: bucket(ok.filter((d) => d.ping_ms != null).map((d) => ({ x: d.ts, y: d.ping_ms })), 160), borderColor: css('--good'), borderDash: [4, 4], borderWidth: 1.5, tension: 0.35, pointRadius: dense ? 0 : 3, pointBackgroundColor: (c) => { const [g] = grade('ping', c.raw?.y); return g === 'good' ? css('--good') : g === 'fair' ? css('--fair') : css('--poor'); }, pointBorderWidth: 0, yAxisID: 'y1' },
       { label: 'Failed', type: 'scatter', data: errs.map((d) => ({ x: d.ts, y: 0, err: true })), pointStyle: 'crossRot', pointRadius: 6, borderColor: css('--poor'), borderWidth: 2, yAxisID: 'y' },
     ];
     legend = `<span><i style="background:${dl}"></i>Download</span><span><i style="background:${ul}"></i>Upload</span><span><i class="dash"></i>Latency</span>${errs.length ? `<span><i style="background:${css('--poor')}"></i>Failed (${errs.length})</span>` : ''}`;
@@ -423,6 +437,7 @@ function renderHistory() {
       }
       if (d[key] != null) groups.get(gk).pts.push({ x: d.ts, y: d[key] });
     }
+    for (const g of groups.values()) g.pts = bucket(g.pts, 200);
     datasets = [...groups.values()].map((g) => ({
       label: g.label, data: g.pts, borderColor: g.color, backgroundColor: g.color, tension: 0.3, borderWidth: 2,
       pointRadius: g.pts.length > 120 ? 0 : 2.5, pointHoverRadius: 5, spanGaps: true,
@@ -452,7 +467,8 @@ function renderHistory() {
               if (it.raw?.err) return ' Failed test';
               const k = state.chartMode === 'overview' ? (it.dataset.yAxisID === 'y1' ? 'ping_ms' : 'download_mbps') : state.chartMetric;
               const v = it.parsed.y;
-              return ` ${it.dataset.label}: ${isSpeed(k) ? fmtSpeed(v) : k === 'packet_loss' ? `${v.toFixed(2)} %` : fmtMs(v)}`;
+              const avgNote = it.raw?.n > 1 ? ` (avg of ${it.raw.n})` : '';
+              return ` ${it.dataset.label}: ${isSpeed(k) ? fmtSpeed(v) : k === 'packet_loss' ? `${v.toFixed(2)} %` : fmtMs(v)}${avgNote}`;
             },
           },
         },
@@ -500,7 +516,7 @@ async function refreshTable() {
     const ok = r.status === 'ok';
     return `<tr>
       <td><div class="mono">${ago(r.ts)}</div><div class="muted mono" style="font-size:11.5px">${fmtDate(r.ts)}</div></td>
-      <td><span class="dotc" style="background:${esc(p?.color || '#888')}"></span>${esc(r.profile_name)}${r.trigger === 'manual' ? ' <span class="tag">manual</span>' : ''}</td>
+      <td><span class="dotc" style="background:${esc(p?.color || '#888')}"></span>${esc(p?.name || r.profile_name)}${r.trigger === 'manual' ? ' <span class="tag">manual</span>' : ''}</td>
       <td class="num dl">${ok ? fmtSpeed(r.download_mbps) : '—'}</td>
       <td class="num ul">${ok ? fmtSpeed(r.upload_mbps) : '—'}</td>
       <td class="num">${ok ? `<span class="dotc" style="background:var(--${lg})"></span>${r.ping_ms?.toFixed(0)} ms / ${r.dl_latency_ms?.toFixed(0) ?? '—'} ms` : '—'}</td>
