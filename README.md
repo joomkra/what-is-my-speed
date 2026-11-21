@@ -4,6 +4,8 @@ A self-hosted internet speed monitor that runs the official **Ookla Speedtest CL
 
 The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speedtest-monitor), with more configuration:
 
+![Dashboard](docs/screenshots/01-dashboard.png)
+
 - **Profiles**: several independent test plans, all shown on one dashboard.
   - Schedule: an interval in minutes, a **cron** expression (with a live preview of the next runs), or manual only.
   - Server strategy:
@@ -22,6 +24,16 @@ The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speed
   - A sortable and filterable measurements table with links to each speedtest.net result.
   - Profile filter chips and ranges of 1h, 6h, 24h, 7d, 30d and 90d.
 - Live updates over Server-Sent Events, CSV export, retention pruning, configurable thresholds, a "pause all schedules" switch, light and dark themes, and optional basic auth.
+
+## Screenshots
+
+These screenshots use demo data with made-up servers.
+
+| | |
+|---|---|
+| ![History by server](docs/screenshots/02-history-by-server.png) | ![Dark theme](docs/screenshots/03-dashboard-dark.png) |
+| ![Profiles](docs/screenshots/05-profiles.png) | ![Profile editor](docs/screenshots/06-profile-editor.png) |
+| ![Measurements](docs/screenshots/04-measurements.png) | |
 
 ## Install
 

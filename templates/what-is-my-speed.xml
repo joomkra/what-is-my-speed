@@ -16,6 +16,11 @@ To bind tests to a specific host interface (for example a VPN), set Network Type
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/templates/what-is-my-speed.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/templates/what-is-my-speed-icon.png</Icon>
+  <Screenshot>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docs/screenshots/01-dashboard.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docs/screenshots/03-dashboard-dark.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docs/screenshots/02-history-by-server.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docs/screenshots/05-profiles.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docs/screenshots/06-profile-editor.png</Screenshot>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
