@@ -347,15 +347,15 @@ function renderProfileRows() {
     const isRunning = state.runner.running?.profileId === p.id;
     const queued = state.runner.queue.filter((j) => j.profileId === p.id).length;
     const last = !l ? '<span class="muted">never</span>' : l.status === 'error'
-      ? `<span class="status error" title="${esc(l.error)}">Error</span> <span class="muted">${ago(l.ts)}</span>`
-      : `<span class="mono" style="color:var(--dl)">${fmtSpeed(l.download_mbps)}</span> / <span class="mono" style="color:var(--ul)">${fmtSpeed(l.upload_mbps)}</span> / <span class="mono">${fmtMs(l.ping_ms)}</span> <span class="muted">${ago(l.ts)}</span>`;
+      ? `<span class="status error" title="${esc(l.error)}">Error</span><div class="cell-sub">${ago(l.ts)}</div>`
+      : `<span class="mono" style="color:var(--dl)">${fmtSpeed(l.download_mbps)}</span> / <span class="mono" style="color:var(--ul)">${fmtSpeed(l.upload_mbps)}</span> / <span class="mono">${fmtMs(l.ping_ms)}</span><div class="cell-sub">${ago(l.ts)}</div>`;
     const avg = s && s.dl != null ? `<span class="mono">${fmtSpeed(s.dl)} / ${fmtSpeed(s.ul)}</span>` : '<span class="muted">—</span>';
     const succ = s ? `${Math.round(((s.total - (s.errors || 0)) / s.total) * 100)}% <span class="muted">(${s.total})</span>` : '<span class="muted">—</span>';
     const next = isRunning ? '<span style="color:var(--accent)">running…</span>' : queued ? `<span class="muted">queued (${queued})</span>` : p.nextRun ? ago(p.nextRun) : '<span class="muted">—</span>';
     return `<tr>
       <td><span class="dotc" style="background:${esc(p.color)}"></span><b>${esc(p.name)}</b></td>
       <td>${esc(scheduleText(p))}</td>
-      <td>${esc(serversText(p))}</td>
+      <td class="wrap">${esc(serversText(p))}</td>
       <td>${last}</td><td>${avg}</td><td>${succ}</td><td>${next}</td>
       <td style="text-align:right"><button class="btn sm" data-runp="${p.id}">Run</button></td>
     </tr>`;
@@ -516,14 +516,14 @@ async function refreshTable() {
     const ok = r.status === 'ok';
     return `<tr>
       <td><div class="mono">${ago(r.ts)}</div><div class="muted mono" style="font-size:11.5px">${fmtDate(r.ts)}</div></td>
-      <td><span class="dotc" style="background:${esc(p?.color || '#888')}"></span>${esc(p?.name || r.profile_name)}${r.trigger === 'manual' ? ' <span class="tag">manual</span>' : ''}</td>
+      <td class="wrap" style="min-width:140px"><span class="dotc" style="background:${esc(p?.color || '#888')}"></span>${esc(p?.name || r.profile_name)}${r.trigger === 'manual' ? '<div class="cell-sub">manual run</div>' : ''}</td>
       <td class="num dl">${ok ? fmtSpeed(r.download_mbps) : '—'}</td>
       <td class="num ul">${ok ? fmtSpeed(r.upload_mbps) : '—'}</td>
       <td class="num">${ok ? `<span class="dotc" style="background:var(--${lg})"></span>${r.ping_ms?.toFixed(0)} ms / ${r.dl_latency_ms?.toFixed(0) ?? '—'} ms` : '—'}</td>
       <td class="num">${ok ? fmtMs(r.jitter_ms) : '—'}</td>
       <td class="num">${r.packet_loss == null ? '—' : `${r.packet_loss.toFixed(1)}%`}</td>
-      <td title="${esc(`${r.server_host || ''} · ${r.isp || ''} · ${r.external_ip || ''}`)}">${esc(r.server_name || (r.requested_server ? serverLabel(r.requested_server) : 'auto'))}${r.server_location ? ` <span class="muted">${esc(r.server_location)}</span>` : ''}</td>
-      <td>${ok ? '<span class="status ok">OK</span>' : `<span class="status error">Error</span> <span class="err-text" title="${esc(r.error)}">${esc(r.error)}</span>`}</td>
+      <td title="${esc(`${r.server_host || ''} · ${r.isp || ''} · ${r.external_ip || ''}`)}">${esc(r.server_name || (r.requested_server ? serverLabel(r.requested_server) : 'auto'))}${r.server_location ? `<div class="cell-sub">${esc(r.server_location)}</div>` : ''}</td>
+      <td>${ok ? '<span class="status ok">OK</span>' : `<span class="status error">Error</span><div class="err-text" title="${esc(r.error)}">${esc(r.error)}</div>`}</td>
       <td style="text-align:right">${r.result_url ? `<a class="btn sm ghost" href="${esc(r.result_url)}" target="_blank" rel="noopener" title="Open result on speedtest.net">↗</a>` : ''}<button class="btn sm ghost" data-del="${r.id}" title="Delete">✕</button></td>
     </tr>`;
   }).join('') : `<tr><td colspan="${COLS.length}" class="empty">No measurements in this range yet. Hit “Run now” to start.</td></tr>`;
