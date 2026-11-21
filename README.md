@@ -1,7 +1,7 @@
 # What Is My Speed
 
 A self-hosted internet speed monitor that runs the official **Ookla Speedtest CLI** on a schedule.
-The dashboard is modeled on [speedtest-monitor](https://github.com/Greite/speedtest-monitor), with more configuration:
+The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speedtest-monitor), with more configuration:
 
 - **Profiles**: several independent test plans, all shown on one dashboard.
   - Schedule: an interval in minutes, a **cron** expression (with a live preview of the next runs), or manual only.
