@@ -23,14 +23,55 @@ The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speed
   - Profile filter chips and ranges of 1h, 6h, 24h, 7d, 30d and 90d.
 - Live updates over Server-Sent Events, CSV export, retention pruning, configurable thresholds, a "pause all schedules" switch, light and dark themes, and optional basic auth.
 
-## Run with Docker
+## Install
+
+Requires Docker with the Compose plugin. Prebuilt images for **amd64**, **arm64** and **armv7** are published to
+[`ghcr.io/joomkra/what-is-my-speed`](https://github.com/joomkra/what-is-my-speed/pkgs/container/what-is-my-speed).
+
+### Docker Compose (recommended)
 
 ```bash
-docker compose up -d --build
-# open http://localhost:3000
+mkdir what-is-my-speed && cd what-is-my-speed
+curl -fsSLO https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/docker-compose.yml
+docker compose up -d
 ```
 
-Data, including the SQLite DB and Ookla's license acceptance, is stored in `./data`.
+Open **http://localhost:3000** (or `http://<server-ip>:3000`). On first visit, confirm the Ookla license notice. A default
+"Auto (nearest)" profile then runs every 30 minutes. Add more profiles and servers in the **Profiles** and **Servers** tabs.
+
+### Docker run
+
+```bash
+docker run -d --name what-is-my-speed --restart unless-stopped \
+  -p 3000:3000 \
+  -v ./data:/data \
+  -e TZ=Europe/Warsaw \
+  ghcr.io/joomkra/what-is-my-speed:latest
+```
+
+### Updating
+
+The dot next to the version number at the bottom of the dashboard is green when you're on the newest version and
+orange when there's a newer one. To update:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+To pin a specific version, use a tag such as `ghcr.io/joomkra/what-is-my-speed:0.0.2` instead of `latest`. See the
+[tags](https://github.com/joomkra/what-is-my-speed/tags) for available versions.
+
+### Build from source
+
+```bash
+git clone https://github.com/joomkra/what-is-my-speed.git
+cd what-is-my-speed
+docker compose up -d --build   # after switching docker-compose.yml from `image:` to `build: .`
+```
+
+## Configuration
+
+Data, including the SQLite DB and Ookla's license acceptance, is stored in the `/data` volume (`./data` with the compose file above).
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -45,29 +86,23 @@ Data, including the SQLite DB and Ookla's license acceptance, is stored in `./da
 
 **Interface binding:** in Docker, the profile's interface and source-IP options only see the container's own interfaces. To use host interfaces such as `wg0`, set `network_mode: host` and remove the `ports:` block.
 
-**Architectures:** the image fetches the correct Ookla CLI build for amd64, arm64, armv7 and i386. For example:
-`docker buildx build --platform linux/arm64 -t what-is-my-speed .`
+**Reverse proxy:** live updates use Server-Sent Events on `/api/events`. Disable response buffering for that path (nginx: `proxy_buffering off;`).
 
 **License:** the container runs the CLI with `--accept-license --accept-gdpr`. A one-time notice in the UI and a line in the startup log both say this. By running it, you accept Ookla's [EULA](https://www.speedtest.net/about/eula) and [privacy policy](https://www.speedtest.net/about/privacy).
 
-### Prebuilt image (GitHub Container Registry)
+## Development
 
-Once the repository is on GitHub, `.github/workflows/docker.yml` builds a multi-arch image (amd64, arm64, armv7) and pushes it to `ghcr.io/<owner>/<repo>` on every push to `main` and on every `v*` tag. To use it, replace `build: .` in `docker-compose.yml` with:
-
-```yaml
-    image: ghcr.io/<owner>/<repo>:latest
-```
-
-The package is private at first. You can make it public in the package settings on GitHub.
-
-## Run without Docker
-
-You need Node ≥ 22.13 (for the built-in `node:sqlite`) and `speedtest` on your PATH.
+You need Node ≥ 22.13 (for the built-in `node:sqlite`) and the [Ookla Speedtest CLI](https://www.speedtest.net/apps/cli) (`speedtest`) on your PATH.
 
 ```bash
+git clone https://github.com/joomkra/what-is-my-speed.git
+cd what-is-my-speed
 npm install
 npm run dev   # data goes to ./data, served on :3000
 ```
+
+Pushing to `main` or a `v*` tag builds and publishes the multi-arch image through `.github/workflows/docker.yml`.
+To release, bump `version` in `package.json`, commit, then run `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main --tags`.
 
 ## API (short)
 

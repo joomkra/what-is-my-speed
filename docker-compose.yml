@@ -1,7 +1,7 @@
 services:
   speedtest:
-    build: .
-    image: what-is-my-speed:latest
+    image: ghcr.io/joomkra/what-is-my-speed:latest
+    # build: .                      # use this instead of `image:` to build from a local clone
     container_name: what-is-my-speed
     restart: unless-stopped
     ports:
