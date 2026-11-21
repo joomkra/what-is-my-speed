@@ -31,6 +31,9 @@
         <button data-view="settings">Settings</button>
       </nav>
       <div class="top-right">
+        <a class="pill ver" id="versionLink" href="https://github.com/joomkra/what-is-my-speed" target="_blank" rel="noopener" title="Checking for updates…">
+          <span class="vdot" id="versionDot"></span><span id="versionText"></span>
+        </a>
         <span class="pill" id="statusPill"><span class="led"></span><span class="ptxt">Idle</span></span>
         <div class="split" id="runSplit">
           <button class="btn primary" id="runAllBtn" title="Run all enabled profiles">
@@ -282,10 +285,6 @@
   </main>
 
   <footer class="foot">
-    <a id="versionLink" href="https://github.com/joomkra/what-is-my-speed" target="_blank" rel="noopener">
-      <span class="vdot" id="versionDot"></span><span id="versionText">WhatIsMySpeed</span>
-    </a>
-    <span class="muted">·</span>
     <span class="muted">Powered by the Ookla Speedtest CLI ·
       <a href="https://www.speedtest.net/about/eula" target="_blank" rel="noopener">EULA</a> ·
       <a href="https://www.speedtest.net/about/privacy" target="_blank" rel="noopener">Privacy</a></span>

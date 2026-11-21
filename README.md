@@ -76,11 +76,11 @@ Then go to **Docker → Add Container**, pick **what-is-my-speed** from the **Te
 - The WebUI is on port 3000. It's also available from the container's icon menu.
 - Unraid sets the timezone automatically.
 - To require a login, set **Basic auth password**.
-- To update, use **Check for Updates** on the Docker tab, or follow the orange dot in the dashboard footer.
+- To update, use **Check for Updates** on the Docker tab, or follow the orange dot next to the version number at the top of the dashboard.
 
 ### Updating
 
-The dot next to the version number at the bottom of the dashboard is green when you're on the newest version and
+The dot next to the version number at the top of the dashboard is green when you're on the newest version and
 orange when there's a newer one. To update:
 
 ```bash
@@ -110,7 +110,7 @@ Data, including the SQLite DB and Ookla's license acceptance, is stored in the `
 | `AUTH_USER` / `AUTH_PASSWORD` | – | Enables HTTP basic auth when a password is set (user defaults to `admin`) |
 | `DEFAULT_INTERVAL_MINUTES` | `30` | Interval of the profile created on first boot |
 | `DATA_DIR` | `/data` | Database location |
-| `UPDATE_CHECK` | `true` | Look up the newest `v*` tag on GitHub (cached for 6h). The footer dot turns green when you're up to date and orange when a newer version exists |
+| `UPDATE_CHECK` | `true` | Look up the newest `v*` tag on GitHub (cached for 6h). The dot next to the version number at the top of the dashboard turns green when you're up to date and orange when a newer version exists |
 | `UPDATE_CHECK_REPO` | `joomkra/what-is-my-speed` | Repository used for the update check |
 
 **Interface binding:** in Docker, the profile's interface and source-IP options only see the container's own interfaces. To use host interfaces such as `wg0`, set `network_mode: host` and remove the `ports:` block.

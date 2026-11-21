@@ -919,20 +919,20 @@ function showOoklaNotice() {
 async function loadVersion() {
   try {
     const quick = await api('/api/version?quick=1');
-    $('#versionText').textContent = `WhatIsMySpeed v${quick.current}`;
+    $('#versionText').textContent = quick.current;
     const v = quick.status === 'checking' ? await api('/api/version') : quick;
     const dot = $('#versionDot');
     dot.className = `vdot ${v.status === 'current' || v.status === 'outdated' ? v.status : ''}`;
-    $('#versionText').textContent = `WhatIsMySpeed v${v.current}`;
+    $('#versionText').textContent = v.current;
     const link = $('#versionLink');
     link.href = v.url;
     link.title = {
-      current: 'You are running the latest version',
-      outdated: `Version ${v.latest} is available. Click to see what's new`,
+      current: `Version ${v.current} is the latest version`,
+      outdated: `Version ${v.current}: ${v.latest} is available. Click to see what's new`,
       disabled: 'Update check is disabled',
     }[v.status] || `Couldn't check for updates${v.error ? ` (${v.error})` : ''}`;
-    if (v.status === 'outdated') $('#versionText').textContent += ` → v${v.latest} available`;
-  } catch { /* footer stays neutral */ }
+    link.setAttribute('aria-label', link.title);
+  } catch { /* indicator stays neutral */ }
 }
 
 async function init() {

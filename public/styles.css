@@ -295,7 +295,9 @@ input[type='color'] { width: 42px; height: 36px; border: 1px solid var(--border-
 .foot { max-width: 1240px; margin: -40px auto 0; padding: 0 24px 40px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 12.5px; color: var(--text-3); }
 .foot a { color: inherit; }
 .foot a:hover { color: var(--text); }
-#versionLink { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); }
+.pill.ver { font-family: var(--mono); font-size: 12.5px; text-decoration: none; }
+.pill.ver:hover { color: var(--text); border-color: var(--border-strong); text-decoration: none; }
+.pill.ver:empty, .pill.ver:has(#versionText:empty) { display: none; }
 .foot .bmc { flex-basis: 100%; display: flex; justify-content: center; margin-top: 6px; }
 .foot .bmc img { height: 40px; width: auto; display: block; transition: transform 0.15s; }
 .foot .bmc:hover img { transform: translateY(-1px); }
