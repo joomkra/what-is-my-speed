@@ -14,6 +14,7 @@ The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speed
     - **Rotate**: round-robin through a list.
     - **All in list**: every server in the list is tested on each run.
   - Optional binding to a network interface (`--interface`) or a source IP (`--ip`).
+  - Optional **quality thresholds** of its own, so a nearby server and one in another country can each be graded fairly (Good, Fair or Poor).
 - **Server directory**: search speedtest.net's server list (`/api/js/servers`) by city, provider or ID. You can also list the CLI's nearest servers or add servers by ID or hostname, save them to a library with custom labels, and run a one-off test against any server.
 - **Shared queue**: tests run one at a time, so profiles never compete for bandwidth. The queue shows live progress (phase plus live ping, download and upload), and you can cancel or remove jobs.
 - **Dashboard**:
@@ -23,7 +24,8 @@ The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speed
   - A history chart with three views: **Overview**, **By profile** and **By server**. Each can show download, upload, idle or loaded latency, jitter, or loss.
   - A sortable and filterable measurements table with links to each speedtest.net result.
   - Profile filter chips and ranges of 1h, 6h, 24h, 7d, 30d and 90d.
-- Live updates over Server-Sent Events, CSV export, retention pruning, configurable thresholds, a "pause all schedules" switch, light and dark themes, and optional basic auth.
+- **Network view** in Settings: the interfaces and addresses the container sees, which one carries the default route, and the public IP and ISP from the last test.
+- Live updates over Server-Sent Events, CSV export, retention pruning, default quality thresholds, a "pause all schedules" switch, light and dark themes, and optional basic auth.
 
 ## Screenshots
 
@@ -33,7 +35,7 @@ These screenshots use demo data with made-up servers.
 |---|---|
 | ![History by server](docs/screenshots/02-history-by-server.png) | ![Dark theme](docs/screenshots/03-dashboard-dark.png) |
 | ![Profiles](docs/screenshots/05-profiles.png) | ![Profile editor](docs/screenshots/06-profile-editor.png) |
-| ![Measurements](docs/screenshots/04-measurements.png) | |
+| ![Measurements](docs/screenshots/04-measurements.png) | ![Settings and network](docs/screenshots/07-settings.png) |
 
 ## Install
 
@@ -129,6 +131,10 @@ cd what-is-my-speed
 npm install
 npm run dev   # data goes to ./data, served on :3000
 ```
+
+Work happens on the `dev` branch. `main` holds released code: every push to `main` rebuilds the `:latest` image, so merge `dev` into `main` only when it's ready to release.
+
+To regenerate the README screenshots from demo data, run `npm run screenshots`. It needs Chrome or Chromium; set `CHROME_PATH` if it isn't at `/usr/bin/google-chrome`. It uses a throw-away database with made-up servers and a dummy speedtest binary, so no real tests run and nothing about your machine appears in the images.
 
 Pushing to `main` or a `v*` tag builds and publishes the multi-arch image through `.github/workflows/docker.yml`.
 To release, bump `version` in `package.json`, commit, then run `git tag -a vX.Y.Z -m vX.Y.Z && git push origin main --tags`.
