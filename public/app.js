@@ -574,7 +574,6 @@ function renderProfileGrid() {
       <dl class="meta">
         <dt>Servers</dt><dd>${esc(MODE_LABEL[p.serverMode])}</dd>
         <dt></dt><dd>${servers}</dd>
-        ${p.interface ? `<dt>Interface</dt><dd class="mono">${esc(p.interface)}</dd>` : ''}
         ${p.bindIp ? `<dt>Source IP</dt><dd class="mono">${esc(p.bindIp)}</dd>` : ''}
         <dt>Thresholds</dt><dd>${p.thresholds
           ? `<span title="Good / Fair: download ≥ ${p.thresholds.downloadGood} / ${p.thresholds.downloadFair} Mbps, upload ≥ ${p.thresholds.uploadGood} / ${p.thresholds.uploadFair} Mbps, ping ≤ ${p.thresholds.pingGood} / ${p.thresholds.pingFair} ms">Custom</span><div class="cell-sub mono">good at ↓${p.thresholds.downloadGood} ↑${p.thresholds.uploadGood} Mbps, ${p.thresholds.pingGood} ms</div>`
@@ -626,7 +625,7 @@ function serverRow(s, actionHtml) {
 function openProfileEditor(profile) {
   const p = profile ? structuredClone(profile) : {
     name: '', color: PALETTE[state.profiles.length % PALETTE.length], enabled: true, scheduleType: 'interval', intervalMinutes: 30,
-    cron: '0 * * * *', serverMode: 'auto', servers: [], interface: '', bindIp: '',
+    cron: '0 * * * *', serverMode: 'auto', servers: [], bindIp: '',
   };
   let pickerTab = state.saved.length ? 'saved' : 'search';
   let searchResults = [];
@@ -683,11 +682,13 @@ function openProfileEditor(profile) {
         </div>
       </div>
 
-      <details ${p.interface || p.bindIp ? 'open' : ''}>
+      <details ${p.bindIp ? 'open' : ''}>
         <summary class="label" style="cursor:pointer">Advanced network options</summary>
-        <div class="row2" style="margin-top:12px">
-          <div class="field"><label for="pIface">Bind to interface</label><input class="input mono" id="pIface" list="pIfaceList" placeholder="eth0, wg0…" value="${esc(p.interface)}" /><datalist id="pIfaceList"></datalist><span class="hint">Forces the test through this interface (<code>--interface</code>). Best for VPNs such as <code>wg0</code>.</span><span class="hint warn" id="pIfaceWarn"></span></div>
-          <div class="field"><label for="pIp">Bind to source IP</label><input class="input mono" id="pIp" list="pIpList" placeholder="192.168.1.10" value="${esc(p.bindIp)}" /><datalist id="pIpList"></datalist><span class="hint">Uses this address as the source (<code>--ip</code>).</span><span class="hint warn" id="pIpWarn"></span></div>
+        <div class="field" style="margin-top:12px">
+          <label for="pIp">Bind to source IP</label>
+          <input class="input mono" id="pIp" list="pIpList" placeholder="Default route (leave empty)" value="${esc(p.bindIp)}" style="max-width:340px" /><datalist id="pIpList"></datalist>
+          <span class="hint">Run this profile's tests from one of the container's addresses (<code>--ip</code>), for example to test through a VPN or a second connection. Leave empty to use the default route.</span>
+          <span class="hint" id="pIpInfo"></span><span class="hint warn" id="pIpWarn"></span>
         </div>
       </details>
     </div>
@@ -791,7 +792,7 @@ function openProfileEditor(profile) {
       name: $('#pName').value.trim() || 'Untitled', color: $('#pColor').value, enabled: $('#pEnabled').checked,
       scheduleType: p.scheduleType, intervalMinutes: Number($('#pInterval').value), cron: p.cron,
       serverMode: p.serverMode, servers: p.serverMode === 'auto' ? [] : p.servers,
-      interface: $('#pIface').value.trim(), bindIp: $('#pIp').value.trim(),
+      bindIp: $('#pIp').value.trim(),
       thresholds: $('#pThDefault').checked ? null : Object.fromEntries(TH_FIELDS.map(([el, k]) => [k, Number($(`#${el}`).value)])),
     };
     try {
@@ -808,34 +809,25 @@ function openProfileEditor(profile) {
   const th = p.thresholds || state.settings;
   for (const [el, k] of TH_FIELDS) $(`#${el}`).value = th[k];
   $('#pThDefault').addEventListener('change', (e) => $('#pTh').classList.toggle('hidden', e.target.checked));
-  // suggest the interfaces the container can see
-  // Suggest only what the container can actually bind to, and warn about anything else.
-  // An interface without an address (e.g. eth0 enslaved to Unraid's br0) can't be used.
+  // Suggest the addresses the container can test from (labelled with their interface),
+  // show which interface the chosen IP is on, and warn when it isn't available.
   api('/api/network').then((n) => {
-    if (!$('#pIfaceList')) return; // editor closed meanwhile
-    // link-local IPv6 (fe80::) can't reach the internet, so it doesn't count as an address here
+    if (!$('#pIpList')) return; // editor closed meanwhile
+    // link-local IPv6 (fe80::) can't reach the internet, so it isn't offered
     const routable = (i) => i.addresses.filter((a) => !(a.family === 'IPv6' && /^fe80:/i.test(a.address)));
-    const usable = n.interfaces.filter((i) => !i.internal && routable(i).length);
-    $('#pIfaceList').innerHTML = usable.map((i) => `<option value="${esc(i.name)}" label="${esc(routable(i).map((a) => a.address).join(', '))}">`).join('');
-    $('#pIpList').innerHTML = usable.flatMap((i) => routable(i).map((a) => `<option value="${esc(a.address)}" label="${esc(i.name)}">`)).join('');
+    const usable = n.interfaces.filter((i) => !i.internal).flatMap((i) => routable(i).map((a) => ({ ...a, iface: i.name })));
+    $('#pIpList').innerHTML = usable.map((a) => `<option value="${esc(a.address)}" label="${esc(a.iface)}">`).join('');
     const where = n.inContainer ? 'inside the container' : 'on this machine';
-    const fix = n.inContainer ? ' Host interfaces only appear with host networking.' : '';
-    const checkIface = () => {
-      const v = $('#pIface').value.trim();
-      const i = n.interfaces.find((x) => x.name === v);
-      $('#pIfaceWarn').textContent = !v ? ''
-        : !i ? `"${v}" doesn't exist ${where}, so tests will fail.${fix} Available: ${usable.map((x) => x.name).join(', ') || 'none'}.`
-          : !routable(i).length ? `"${v}" has no usable IP address, so tests will fail. If it's part of a bridge, use the bridge instead (for example br0).`
-            : '';
-    };
-    const checkIp = () => {
+    const check = () => {
       const v = $('#pIp').value.trim();
-      $('#pIpWarn').textContent = v && !n.interfaces.some((i) => i.addresses.some((a) => a.address === v))
-        ? `No interface ${where} has the address ${v}, so tests will fail.${fix}` : '';
+      const hit = n.interfaces.find((i) => i.addresses.some((a) => a.address === v));
+      $('#pIpInfo').innerHTML = v && hit ? `On interface <b class="mono">${esc(hit.name)}</b>${hit.defaultRoute ? ' (default route)' : ''}.` : '';
+      $('#pIpWarn').textContent = v && !hit
+        ? `No interface ${where} has the address ${v}, so tests will fail.${n.inContainer ? ' Host addresses only appear with host networking.' : ''} Available: ${usable.map((a) => `${a.address} (${a.iface})`).join(', ') || 'none'}.`
+        : '';
     };
-    $('#pIface').addEventListener('input', checkIface);
-    $('#pIp').addEventListener('input', checkIp);
-    checkIface(); checkIp();
+    $('#pIp').addEventListener('input', check);
+    check();
   }).catch(() => {});
 
   renderSched(); renderMode();
@@ -935,8 +927,8 @@ async function renderNetwork() {
       ${t ? `<div class="hint">From the latest successful test, ${ago(t.ts)}${t.isVpn ? ' (Ookla flagged it as a VPN)' : ''}.</div>` : '<div class="hint">Run a test to see your public IP and ISP.</div>'}
       <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Addresses</th><th>MAC</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="hint">${n.inContainer
-        ? 'These are the interfaces inside the container. With Docker\'s default bridge network you\'ll usually see only <code>eth0</code> and <code>lo</code>. To test through a host interface such as a VPN (<code>wg0</code>), run the container with host networking.'
-        : 'These are this machine\'s network interfaces.'} Use an interface name or address in a profile's advanced network options.</div>`;
+        ? 'These are the interfaces inside the container. With Docker\'s default bridge network you\'ll usually see only <code>eth0</code> and <code>lo</code>. To test from a host address, such as a VPN (<code>wg0</code>) or a second connection, run the container with host networking.'
+        : 'These are this machine\'s network interfaces.'} To test from one of these addresses, set it as a profile's source IP (Advanced network options).</div>`;
   } catch (e) {
     el.innerHTML = `<div class="hint">Couldn't load network info: ${esc(e.message)}</div>`;
   }

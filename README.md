@@ -13,7 +13,7 @@ The dashboard is inspired on [speedtest-monitor](https://github.com/Greite/speed
     - **Fixed**: always the same server.
     - **Rotate**: round-robin through a list.
     - **All in list**: every server in the list is tested on each run.
-  - Optional binding to a network interface (`--interface`) or a source IP (`--ip`).
+  - Optional source IP (`--ip`), to test through a specific interface such as a VPN or a second connection. The editor shows which interface each address belongs to.
   - Optional **quality thresholds** of its own, so a nearby server and one in another country can each be graded fairly (Good, Fair or Poor).
 - **Server directory**: search speedtest.net's server list (`/api/js/servers`) by city, provider or ID. You can also list the CLI's nearest servers or add servers by ID or hostname, save them to a library with custom labels, and run a one-off test against any server.
 - **Shared queue**: tests run one at a time, so profiles never compete for bandwidth. The queue shows live progress (phase plus live ping, download and upload), and you can cancel or remove jobs.
@@ -115,7 +115,7 @@ Data, including the SQLite DB and Ookla's license acceptance, is stored in the `
 | `UPDATE_CHECK` | `true` | Look up the newest `v*` tag on GitHub (cached for 6h). The dot next to the version number at the top of the dashboard turns green when you're up to date and orange when a newer version exists |
 | `UPDATE_CHECK_REPO` | `joomkra/what-is-my-speed` | Repository used for the update check |
 
-**Interface binding:** in Docker, the profile's interface and source-IP options only see the container's own interfaces. To use host interfaces such as `wg0`, set `network_mode: host` and remove the `ports:` block.
+**Source IP:** in Docker, a profile's source IP must be an address the container has (see Settings → Network). To test from a host address, such as a VPN (`wg0`) or a second connection, set `network_mode: host` and remove the `ports:` block.
 
 **Reverse proxy:** live updates use Server-Sent Events on `/api/events`. Disable response buffering for that path (nginx: `proxy_buffering off;`).
 

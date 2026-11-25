@@ -34,9 +34,10 @@ for (let i = 0; i < 50; i++) {
 
 const FAKE_NETWORK = {
   hostname: 'what-is-my-speed',
-  inContainer: true,
+  inContainer: true, // as if run with host networking, so the VPN interface is visible
   interfaces: [
     { name: 'eth0', internal: false, defaultRoute: true, mac: '02:42:ac:11:00:02', addresses: [{ family: 'IPv4', address: '172.17.0.2', cidr: '172.17.0.2/16' }] },
+    { name: 'wg0', internal: false, defaultRoute: false, mac: null, addresses: [{ family: 'IPv4', address: '10.8.0.2', cidr: '10.8.0.2/24' }] },
     { name: 'lo', internal: true, defaultRoute: false, mac: null, addresses: [{ family: 'IPv4', address: '127.0.0.1', cidr: '127.0.0.1/8' }, { family: 'IPv6', address: '::1', cidr: '::1/128' }] },
   ],
   lastTest: { ts: Date.now() - 6 * 60e3, externalIp: '203.0.113.42', isp: 'Example Fiber Co.', interface: 'eth0', internalIp: '172.17.0.2', isVpn: false },
@@ -88,7 +89,7 @@ await p.screenshot({ path: `${outDir}/05-profiles.png` });
 await p.close();
 
 // editor for "VPN tunnel": rotate strategy + its own thresholds; taller window so it all fits
-p = await open(light, '/#profiles', 1560);
+p = await open(light, '/#profiles', 1720);
 await (await p.$$('[data-edit]'))[2].click();
 await p.waitForSelector('.modal');
 await sleep(600);

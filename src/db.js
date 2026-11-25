@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const DATA_DIR = process.env.DATA_DIR || '/data';
@@ -83,6 +84,16 @@ CREATE INDEX IF NOT EXISTS idx_meas_profile_ts ON measurements(profile_id, ts);
 const profileCols = db.prepare('PRAGMA table_info(profiles)').all().map((c) => c.name);
 if (!profileCols.includes('thresholds')) db.exec('ALTER TABLE profiles ADD COLUMN thresholds TEXT');
 
+// 0.0.4 removed "bind to interface". Convert profiles that used it to the interface's
+// IPv4 address (same effect), so they keep testing through the same interface.
+for (const r of db.prepare("SELECT id, name, interface, bind_ip FROM profiles WHERE interface != ''").all()) {
+  const ip = r.bind_ip ? null : (os.networkInterfaces()[r.interface] || []).find((a) => a.family === 'IPv4' && !a.internal)?.address;
+  db.prepare("UPDATE profiles SET interface = '', bind_ip = COALESCE(?, bind_ip) WHERE id = ?").run(ip ?? null, r.id);
+  console.log(r.bind_ip ? `[upgrade] profile "${r.name}": dropped interface "${r.interface}", keeping source IP ${r.bind_ip}`
+    : ip ? `[upgrade] profile "${r.name}": interface "${r.interface}" replaced by its source IP ${ip}`
+      : `[upgrade] profile "${r.name}": interface "${r.interface}" isn't available here, so it was removed; set a source IP if needed`);
+}
+
 export const THRESHOLD_KEYS = ['downloadGood', 'downloadFair', 'uploadGood', 'uploadFair', 'pingGood', 'pingFair'];
 
 export const DEFAULT_SETTINGS = {
@@ -138,7 +149,6 @@ function rowToProfile(r) {
     serverMode: r.server_mode,
     servers: JSON.parse(r.servers || '[]'),
     rotateIndex: r.rotate_index,
-    interface: r.interface,
     bindIp: r.bind_ip,
     thresholds: r.thresholds ? JSON.parse(r.thresholds) : null, // null = use the default thresholds
     createdAt: r.created_at,
@@ -165,7 +175,7 @@ export function sanitizeProfile(p, existing = {}) {
     .map((s) => String(s).trim())
     .filter((s) => /^[0-9]+$/.test(s) || /^[a-zA-Z0-9.-]+$/.test(s))
     .slice(0, 50);
-  out.interface = String(out.interface || '').trim().replace(/[^a-zA-Z0-9_.:@-]/g, '');
+  delete out.interface; // removed in 0.0.4: binding is by source IP only
   out.bindIp = String(out.bindIp || '').trim().replace(/[^0-9a-fA-F.:]/g, '');
   out.thresholds = sanitizeThresholds(out.thresholds);
   return out;
@@ -190,7 +200,7 @@ export function createProfile(p) {
   const r = db.prepare(`INSERT INTO profiles(name, color, enabled, schedule_type, interval_minutes, cron, server_mode, servers, interface, bind_ip, thresholds, created_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     s.name, s.color, s.enabled ? 1 : 0, s.scheduleType, s.intervalMinutes, s.cron, s.serverMode,
-    JSON.stringify(s.servers), s.interface, s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, Date.now());
+    JSON.stringify(s.servers), '', s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, Date.now());
   return getProfile(r.lastInsertRowid);
 }
 
@@ -200,7 +210,7 @@ export function updateProfile(id, p) {
   const s = sanitizeProfile(p, existing);
   db.prepare(`UPDATE profiles SET name=?, color=?, enabled=?, schedule_type=?, interval_minutes=?, cron=?, server_mode=?, servers=?, interface=?, bind_ip=?, thresholds=? WHERE id=?`).run(
     s.name, s.color, s.enabled ? 1 : 0, s.scheduleType, s.intervalMinutes, s.cron, s.serverMode,
-    JSON.stringify(s.servers), s.interface, s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, id);
+    JSON.stringify(s.servers), '', s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, id);
   return getProfile(id);
 }
 

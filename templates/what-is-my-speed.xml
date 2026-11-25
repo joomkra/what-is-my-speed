@@ -11,7 +11,7 @@
   <Project>https://github.com/joomkra/what-is-my-speed</Project>
   <Overview>Self-hosted internet speed monitor that runs the official Ookla Speedtest CLI on a schedule. You can set up several test profiles, each with its own schedule (interval or cron) and server strategy (nearest, fixed, rotate, or every server in a list). Everything is shown on one dashboard with history charts, live test progress, server search and CSV export.[br][br]
 [b]Note:[/b] this container runs the Ookla Speedtest CLI. By using it, you accept Ookla's EULA (https://www.speedtest.net/about/eula) and Privacy Policy (https://www.speedtest.net/about/privacy).[br][br]
-To bind tests to a specific host interface (for example a VPN), set Network Type to "host". The WebUI then listens on port 3000 of the server.</Overview>
+To test from a specific host address (for example a VPN or a second connection), set Network Type to "host". The WebUI then listens on port 3000 of the server.</Overview>
   <Category>Network:Other Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/joomkra/what-is-my-speed/main/templates/what-is-my-speed.xml</TemplateURL>

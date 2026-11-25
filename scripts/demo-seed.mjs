@@ -36,7 +36,7 @@ const auto = store.updateProfile(store.listProfiles()[0].id, {
 });
 const eu = store.createProfile({ name: 'EU backbone', color: '#8b5cf6', scheduleType: 'cron', cron: '0 */2 * * *', serverMode: 'all', servers: ['90001', '90002', '90003'] });
 const vpn = store.createProfile({
-  name: 'VPN tunnel', color: '#e0a106', scheduleType: 'interval', intervalMinutes: 60, serverMode: 'rotate', servers: ['90004', '90006'], interface: 'wg0',
+  name: 'VPN tunnel', color: '#e0a106', scheduleType: 'interval', intervalMinutes: 60, serverMode: 'rotate', servers: ['90004', '90006'], bindIp: '10.8.0.2',
   thresholds: { downloadGood: 250, downloadFair: 100, uploadGood: 150, uploadFair: 50, pingGood: 40, pingFair: 80 },
 });
 store.createProfile({ name: 'Nightly ISP check', color: '#16a34a', scheduleType: 'cron', cron: '30 3 * * *', serverMode: 'fixed', servers: ['90005'], enabled: false });

@@ -12,17 +12,16 @@ let current = null;        // { job, child, progress, startedAt }
 
 const isNumericId = (s) => /^[0-9]+$/.test(String(s));
 
-export function buildArgs({ server, iface, bindIp }) {
+export function buildArgs({ server, bindIp }) {
   const args = ['--accept-license', '--accept-gdpr', '-f', 'jsonl', '-p', 'yes', '--progress-update-interval=500'];
   if (server) args.push(isNumericId(server) ? `--server-id=${server}` : `--host=${server}`);
-  if (iface) args.push(`--interface=${iface}`);
   if (bindIp) args.push(`--ip=${bindIp}`);
   return args;
 }
 
 /** Expand a profile into one or more jobs depending on its server mode. */
 export function jobsForProfile(profile, trigger) {
-  const base = { profileId: profile.id, profileName: profile.name, color: profile.color, trigger, iface: profile.interface, bindIp: profile.bindIp };
+  const base = { profileId: profile.id, profileName: profile.name, color: profile.color, trigger, bindIp: profile.bindIp };
   const servers = profile.servers || [];
   switch (profile.serverMode) {
     case 'fixed':
@@ -176,7 +175,6 @@ function pump() {
 // Turn the CLI's terse messages into something actionable where we can.
 function explainError(job, msg) {
   if (/Failed binding local connection end/i.test(msg)) {
-    if (job.iface) return `Can't bind to interface "${job.iface}": it doesn't exist inside the container or has no IP address. See Settings → Network. (${msg})`;
     if (job.bindIp) return `Can't bind to IP ${job.bindIp}: no interface inside the container has this address. See Settings → Network. (${msg})`;
   }
   return msg;
