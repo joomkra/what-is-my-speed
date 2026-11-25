@@ -683,11 +683,11 @@ function openProfileEditor(profile) {
         </div>
       </div>
 
-      <details>
+      <details ${p.interface || p.bindIp ? 'open' : ''}>
         <summary class="label" style="cursor:pointer">Advanced network options</summary>
         <div class="row2" style="margin-top:12px">
-          <div class="field"><label for="pIface">Bind to interface</label><input class="input mono" id="pIface" list="pIfaceList" placeholder="eth0, wg0…" value="${esc(p.interface)}" /><datalist id="pIfaceList"></datalist><span class="hint">Passed as <code>--interface</code>. Needs host networking in Docker.</span></div>
-          <div class="field"><label for="pIp">Bind to source IP</label><input class="input mono" id="pIp" placeholder="192.168.1.10" value="${esc(p.bindIp)}" /><span class="hint">Passed as <code>--ip</code>.</span></div>
+          <div class="field"><label for="pIface">Bind to interface</label><input class="input mono" id="pIface" list="pIfaceList" placeholder="eth0, wg0…" value="${esc(p.interface)}" /><datalist id="pIfaceList"></datalist><span class="hint">Forces the test through this interface (<code>--interface</code>). Best for VPNs such as <code>wg0</code>.</span><span class="hint warn" id="pIfaceWarn"></span></div>
+          <div class="field"><label for="pIp">Bind to source IP</label><input class="input mono" id="pIp" list="pIpList" placeholder="192.168.1.10" value="${esc(p.bindIp)}" /><datalist id="pIpList"></datalist><span class="hint">Uses this address as the source (<code>--ip</code>).</span><span class="hint warn" id="pIpWarn"></span></div>
         </div>
       </details>
     </div>
@@ -809,9 +809,33 @@ function openProfileEditor(profile) {
   for (const [el, k] of TH_FIELDS) $(`#${el}`).value = th[k];
   $('#pThDefault').addEventListener('change', (e) => $('#pTh').classList.toggle('hidden', e.target.checked));
   // suggest the interfaces the container can see
+  // Suggest only what the container can actually bind to, and warn about anything else.
+  // An interface without an address (e.g. eth0 enslaved to Unraid's br0) can't be used.
   api('/api/network').then((n) => {
-    const list = $('#pIfaceList');
-    if (list) list.innerHTML = n.interfaces.filter((i) => !i.internal).map((i) => `<option value="${esc(i.name)}">`).join('');
+    if (!$('#pIfaceList')) return; // editor closed meanwhile
+    // link-local IPv6 (fe80::) can't reach the internet, so it doesn't count as an address here
+    const routable = (i) => i.addresses.filter((a) => !(a.family === 'IPv6' && /^fe80:/i.test(a.address)));
+    const usable = n.interfaces.filter((i) => !i.internal && routable(i).length);
+    $('#pIfaceList').innerHTML = usable.map((i) => `<option value="${esc(i.name)}" label="${esc(routable(i).map((a) => a.address).join(', '))}">`).join('');
+    $('#pIpList').innerHTML = usable.flatMap((i) => routable(i).map((a) => `<option value="${esc(a.address)}" label="${esc(i.name)}">`)).join('');
+    const where = n.inContainer ? 'inside the container' : 'on this machine';
+    const fix = n.inContainer ? ' Host interfaces only appear with host networking.' : '';
+    const checkIface = () => {
+      const v = $('#pIface').value.trim();
+      const i = n.interfaces.find((x) => x.name === v);
+      $('#pIfaceWarn').textContent = !v ? ''
+        : !i ? `"${v}" doesn't exist ${where}, so tests will fail.${fix} Available: ${usable.map((x) => x.name).join(', ') || 'none'}.`
+          : !routable(i).length ? `"${v}" has no usable IP address, so tests will fail. If it's part of a bridge, use the bridge instead (for example br0).`
+            : '';
+    };
+    const checkIp = () => {
+      const v = $('#pIp').value.trim();
+      $('#pIpWarn').textContent = v && !n.interfaces.some((i) => i.addresses.some((a) => a.address === v))
+        ? `No interface ${where} has the address ${v}, so tests will fail.${fix}` : '';
+    };
+    $('#pIface').addEventListener('input', checkIface);
+    $('#pIp').addEventListener('input', checkIp);
+    checkIface(); checkIp();
   }).catch(() => {});
 
   renderSched(); renderMode();

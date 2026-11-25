@@ -215,6 +215,8 @@ tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
 td.num { font-family: var(--mono); }
 td.wrap { white-space: normal; min-width: 120px; }
+.hint.warn { color: var(--fair); }
+.hint.warn:empty { display: none; }
 .cell-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; }
 td.dl { color: var(--dl); } td.ul { color: var(--ul); }
 .status { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 550; }

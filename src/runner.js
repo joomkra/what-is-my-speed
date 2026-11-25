@@ -95,7 +95,12 @@ function pump() {
   emitState();
 
   let result = null;
-  let lastError = '';
+  let fatalError = '';      // set by us: timeout, missing binary
+  const cliErrors = [];     // errors the CLI reported; the first one is the cause, later ones are follow-ups
+  const addCliError = (msg) => {
+    msg = String(msg).replace(/^\[[^\]]*\]\s*\[error\]\s*/i, '').trim();
+    if (msg && !cliErrors.includes(msg)) cliErrors.push(msg);
+  };
   let stdoutBuf = '';
   let stderrBuf = '';
 
@@ -124,7 +129,7 @@ function pump() {
         result = ev;
         break;
       case 'log':
-        if (ev.level === 'error') lastError = ev.message;
+        if (ev.level === 'error') addCliError(ev.message);
         break;
       default:
         return;
@@ -144,28 +149,37 @@ function pump() {
       const line = stderrBuf.slice(0, i); stderrBuf = stderrBuf.slice(i + 1);
       try {
         const ev = JSON.parse(line);
-        if (ev.type === 'log' && ev.level === 'error') lastError = ev.message;
+        if (ev.type === 'log' && ev.level === 'error') addCliError(ev.message);
       } catch {
-        if (/error/i.test(line)) lastError = line.trim();
+        if (/error/i.test(line)) addCliError(line);
       }
     }
   });
 
   const timeout = setTimeout(() => {
-    lastError = `Timed out after ${settings.testTimeoutSeconds}s`;
+    fatalError = `Timed out after ${settings.testTimeoutSeconds}s`;
     child.kill('SIGKILL');
   }, Math.max(30, settings.testTimeoutSeconds) * 1000);
 
-  child.on('error', (err) => { lastError = err.code === 'ENOENT' ? `speedtest binary not found (${SPEEDTEST_BIN})` : err.message; });
+  child.on('error', (err) => { fatalError = err.code === 'ENOENT' ? `speedtest binary not found (${SPEEDTEST_BIN})` : err.message; });
   child.on('close', (code) => {
     clearTimeout(timeout);
     if (stdoutBuf) onLine(stdoutBuf);
     const cancelled = current?.cancelled;
     let err = null;
     if (cancelled) err = 'Cancelled';
-    else if (!result) err = lastError || `speedtest exited with code ${code}`;
+    else if (!result) err = explainError(job, fatalError || cliErrors[0] || `speedtest exited with code ${code}`);
     finish(job, startedAt, result, err);
   });
+}
+
+// Turn the CLI's terse messages into something actionable where we can.
+function explainError(job, msg) {
+  if (/Failed binding local connection end/i.test(msg)) {
+    if (job.iface) return `Can't bind to interface "${job.iface}": it doesn't exist inside the container or has no IP address. See Settings → Network. (${msg})`;
+    if (job.bindIp) return `Can't bind to IP ${job.bindIp}: no interface inside the container has this address. See Settings → Network. (${msg})`;
+  }
+  return msg;
 }
 
 function finish(job, startedAt, r, error) {
