@@ -132,7 +132,7 @@ npm install
 npm run dev   # data goes to ./data, served on :3000
 ```
 
-Work happens on the `dev` branch. `main` holds released code: every push to `main` rebuilds the `:latest` image, so merge `dev` into `main` only when it's ready to release.
+Work happens on the `dev` branch. Every push to `dev` builds a test image, `ghcr.io/joomkra/what-is-my-speed:dev`. `main` holds released code: every push to `main` rebuilds the `:latest` image, so merge `dev` into `main` only when it's ready to release.
 
 To regenerate the README screenshots from demo data, run `npm run screenshots`. It needs Chrome or Chromium; set `CHROME_PATH` if it isn't at `/usr/bin/google-chrome`. It uses a throw-away database with made-up servers and a dummy speedtest binary, so no real tests run and nothing about your machine appears in the images.
 

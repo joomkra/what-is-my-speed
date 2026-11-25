@@ -2,7 +2,7 @@ name: Docker image
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]   # dev builds the :dev image; latest only comes from main
     tags: ['v*']
   pull_request:
   workflow_dispatch:
