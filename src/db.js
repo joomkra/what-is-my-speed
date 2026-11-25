@@ -79,6 +79,12 @@ CREATE INDEX IF NOT EXISTS idx_meas_ts ON measurements(ts);
 CREATE INDEX IF NOT EXISTS idx_meas_profile_ts ON measurements(profile_id, ts);
 `);
 
+// ---------- migrations for databases created by older versions ----------
+const profileCols = db.prepare('PRAGMA table_info(profiles)').all().map((c) => c.name);
+if (!profileCols.includes('thresholds')) db.exec('ALTER TABLE profiles ADD COLUMN thresholds TEXT');
+
+export const THRESHOLD_KEYS = ['downloadGood', 'downloadFair', 'uploadGood', 'uploadFair', 'pingGood', 'pingFair'];
+
 export const DEFAULT_SETTINGS = {
   retentionDays: 365,
   testTimeoutSeconds: 180,
@@ -134,6 +140,7 @@ function rowToProfile(r) {
     rotateIndex: r.rotate_index,
     interface: r.interface,
     bindIp: r.bind_ip,
+    thresholds: r.thresholds ? JSON.parse(r.thresholds) : null, // null = use the default thresholds
     createdAt: r.created_at,
   };
 }
@@ -160,15 +167,30 @@ export function sanitizeProfile(p, existing = {}) {
     .slice(0, 50);
   out.interface = String(out.interface || '').trim().replace(/[^a-zA-Z0-9_.:@-]/g, '');
   out.bindIp = String(out.bindIp || '').trim().replace(/[^0-9a-fA-F.:]/g, '');
+  out.thresholds = sanitizeThresholds(out.thresholds);
+  return out;
+}
+
+// Either null (use defaults) or all six thresholds as non-negative numbers.
+function sanitizeThresholds(t) {
+  if (!t || typeof t !== 'object') return null;
+  const out = {};
+  for (const k of THRESHOLD_KEYS) {
+    const v = Number(t[k]);
+    if (!Number.isFinite(v) || v < 0) {
+      throw Object.assign(new Error(`Threshold "${k}" must be a number of 0 or more`), { status: 400 });
+    }
+    out[k] = v;
+  }
   return out;
 }
 
 export function createProfile(p) {
   const s = sanitizeProfile(p);
-  const r = db.prepare(`INSERT INTO profiles(name, color, enabled, schedule_type, interval_minutes, cron, server_mode, servers, interface, bind_ip, created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(
+  const r = db.prepare(`INSERT INTO profiles(name, color, enabled, schedule_type, interval_minutes, cron, server_mode, servers, interface, bind_ip, thresholds, created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     s.name, s.color, s.enabled ? 1 : 0, s.scheduleType, s.intervalMinutes, s.cron, s.serverMode,
-    JSON.stringify(s.servers), s.interface, s.bindIp, Date.now());
+    JSON.stringify(s.servers), s.interface, s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, Date.now());
   return getProfile(r.lastInsertRowid);
 }
 
@@ -176,9 +198,9 @@ export function updateProfile(id, p) {
   const existing = getProfile(id);
   if (!existing) return null;
   const s = sanitizeProfile(p, existing);
-  db.prepare(`UPDATE profiles SET name=?, color=?, enabled=?, schedule_type=?, interval_minutes=?, cron=?, server_mode=?, servers=?, interface=?, bind_ip=? WHERE id=?`).run(
+  db.prepare(`UPDATE profiles SET name=?, color=?, enabled=?, schedule_type=?, interval_minutes=?, cron=?, server_mode=?, servers=?, interface=?, bind_ip=?, thresholds=? WHERE id=?`).run(
     s.name, s.color, s.enabled ? 1 : 0, s.scheduleType, s.intervalMinutes, s.cron, s.serverMode,
-    JSON.stringify(s.servers), s.interface, s.bindIp, id);
+    JSON.stringify(s.servers), s.interface, s.bindIp, s.thresholds ? JSON.stringify(s.thresholds) : null, id);
   return getProfile(id);
 }
 
@@ -278,6 +300,11 @@ export function perProfileStats(from) {
       AVG(CASE WHEN status='ok' THEN download_mbps END) dl, AVG(CASE WHEN status='ok' THEN upload_mbps END) ul,
       AVG(CASE WHEN status='ok' THEN ping_ms END) ping, MAX(ts) lastTs
     FROM measurements WHERE ts >= ? GROUP BY profile_id`).all(from);
+}
+
+export function latestSuccessful() {
+  return db.prepare(`SELECT ts, isp, external_ip, internal_ip, interface_name, is_vpn FROM measurements
+    WHERE status = 'ok' ORDER BY ts DESC LIMIT 1`).get() || null;
 }
 
 export function latestPerProfile() {

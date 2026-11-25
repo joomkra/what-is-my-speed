@@ -254,13 +254,13 @@
       </div>
       <div class="settings-grid">
         <div class="card">
-          <div class="card-head"><div class="card-title">Quality thresholds</div></div>
+          <div class="card-head"><div class="card-title">Default quality thresholds</div></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
-            <div class="hint">Used for the Good / Fair / Poor badges and chart point colors.</div>
-            <div class="threshold-row"><span></span><span class="label">Good ≥ / ≤</span><span class="label">Fair ≥ / ≤</span></div>
-            <div class="threshold-row"><span class="label">Download Mbps</span><input class="input" type="number" id="sDlGood" /><input class="input" type="number" id="sDlFair" /></div>
-            <div class="threshold-row"><span class="label">Upload Mbps</span><input class="input" type="number" id="sUlGood" /><input class="input" type="number" id="sUlFair" /></div>
-            <div class="threshold-row"><span class="label">Ping ms (≤)</span><input class="input" type="number" id="sPingGood" /><input class="input" type="number" id="sPingFair" /></div>
+            <div class="hint">Used for the Good / Fair / Poor badges and chart colors, for every profile that doesn't set its own. Set a profile's own thresholds in its editor on the Profiles page.</div>
+            <div class="threshold-row"><span></span><span class="label">Good</span><span class="label">Fair</span></div>
+            <div class="threshold-row"><span class="label">Download ≥ Mbps</span><input class="input" type="number" id="sDlGood" /><input class="input" type="number" id="sDlFair" /></div>
+            <div class="threshold-row"><span class="label">Upload ≥ Mbps</span><input class="input" type="number" id="sUlGood" /><input class="input" type="number" id="sUlFair" /></div>
+            <div class="threshold-row"><span class="label">Ping ≤ ms</span><input class="input" type="number" id="sPingGood" /><input class="input" type="number" id="sPingFair" /></div>
           </div>
         </div>
         <div class="card">
@@ -279,6 +279,13 @@
             </div>
             <div class="inline"><a class="btn" href="/api/export.csv" download>Export all measurements (CSV)</a></div>
           </div>
+        </div>
+        <div class="card span-all">
+          <div class="card-head">
+            <div class="card-title">Network</div>
+            <button class="btn sm" id="netRefresh">Refresh</button>
+          </div>
+          <div class="card-body" id="netInfo" style="display:flex;flex-direction:column;gap:14px"><div class="hint">Loading…</div></div>
         </div>
       </div>
     </section>

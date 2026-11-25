@@ -77,8 +77,13 @@ function bucket(pts, n) {
   return out;
 }
 
-function grade(kind, v) {
-  const s = state.settings;
+// A profile's own thresholds, or the defaults from Settings.
+function thresholdsFor(profileId) {
+  return state.profiles.find((p) => p.id === profileId)?.thresholds || state.settings;
+}
+
+function grade(kind, v, profileId) {
+  const s = thresholdsFor(profileId);
   if (v == null) return ['none', '—'];
   if (kind === 'ping') return v <= s.pingGood ? ['good', 'Good'] : v <= s.pingFair ? ['fair', 'Fair'] : ['poor', 'Poor'];
   const [g, f] = kind === 'dl' ? [s.downloadGood, s.downloadFair] : [s.uploadGood, s.uploadFair];
@@ -314,8 +319,10 @@ function renderStats() {
   $('#latValue').innerHTML = last ? `${last.ping_ms?.toFixed(0) ?? '—'}<small>ms</small> / ${last.dl_latency_ms?.toFixed(0) ?? '—'}<small>ms</small>` : '—';
 
   for (const [id, kind, v] of [['dlBadge', 'dl', last?.download_mbps], ['ulBadge', 'ul', last?.upload_mbps], ['latBadge', 'ping', last?.ping_ms]]) {
-    const [cls, txt] = grade(kind, v);
+    const [cls, txt] = grade(kind, v, last?.profile_id);
+    const lp = state.profiles.find((p) => p.id === last?.profile_id);
     $(`#${id}`).className = `badge ${cls}`; $(`#${id}`).textContent = txt;
+    $(`#${id}`).title = lp?.thresholds ? `Using ${lp.name}'s own thresholds` : 'Using the default thresholds (Settings)';
   }
   const when = last ? `<span>• ${ago(last.ts)}</span>` : '<span>No successful tests in range</span>';
   const srv = last?.server_name ? `<span>• ${esc(last.server_name)}</span>` : '';
@@ -411,7 +418,7 @@ function renderHistory() {
     datasets = [
       { label: 'Download', data: bucket(ok.map((d) => ({ x: d.ts, y: d.download_mbps })), 160), borderColor: dl, backgroundColor: areaFill(dl), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
       { label: 'Upload', data: bucket(ok.map((d) => ({ x: d.ts, y: d.upload_mbps })), 160), borderColor: ul, backgroundColor: areaFill(ul), fill: 'origin', tension: 0.35, borderWidth: 2, pointRadius: dense ? 0 : 2, pointHoverRadius: 5, yAxisID: 'y' },
-      { label: 'Latency', data: bucket(ok.filter((d) => d.ping_ms != null).map((d) => ({ x: d.ts, y: d.ping_ms })), 160), borderColor: css('--good'), borderDash: [4, 4], borderWidth: 1.5, tension: 0.35, pointRadius: dense ? 0 : 3, pointBackgroundColor: (c) => { const [g] = grade('ping', c.raw?.y); return g === 'good' ? css('--good') : g === 'fair' ? css('--fair') : css('--poor'); }, pointBorderWidth: 0, yAxisID: 'y1' },
+      { label: 'Latency', data: bucket(ok.filter((d) => d.ping_ms != null).map((d) => ({ x: d.ts, y: d.ping_ms })), 160), borderColor: css('--good'), borderDash: [4, 4], borderWidth: 1.5, tension: 0.35, pointRadius: dense ? 0 : 3, pointBackgroundColor: (c) => { const [g] = grade('ping', c.raw?.y, state.selected.size === 1 ? [...state.selected][0] : null); return g === 'good' ? css('--good') : g === 'fair' ? css('--fair') : css('--poor'); }, pointBorderWidth: 0, yAxisID: 'y1' },
       { label: 'Failed', type: 'scatter', data: errs.map((d) => ({ x: d.ts, y: 0, err: true })), pointStyle: 'crossRot', pointRadius: 6, borderColor: css('--poor'), borderWidth: 2, yAxisID: 'y' },
     ];
     legend = `<span><i style="background:${dl}"></i>Download</span><span><i style="background:${ul}"></i>Upload</span><span><i class="dash"></i>Latency</span>${errs.length ? `<span><i style="background:${css('--poor')}"></i>Failed (${errs.length})</span>` : ''}`;
@@ -512,7 +519,7 @@ async function refreshTable() {
   $('#exportBtn').href = `/api/export.csv?${exportParams}`;
   $('#measRows').innerHTML = rows.length ? rows.map((r) => {
     const p = state.profiles.find((x) => x.id === r.profile_id);
-    const [lg] = grade('ping', r.ping_ms);
+    const [lg] = grade('ping', r.ping_ms, r.profile_id);
     const ok = r.status === 'ok';
     return `<tr>
       <td><div class="mono">${ago(r.ts)}</div><div class="muted mono" style="font-size:11.5px">${fmtDate(r.ts)}</div></td>
@@ -569,6 +576,9 @@ function renderProfileGrid() {
         <dt></dt><dd>${servers}</dd>
         ${p.interface ? `<dt>Interface</dt><dd class="mono">${esc(p.interface)}</dd>` : ''}
         ${p.bindIp ? `<dt>Source IP</dt><dd class="mono">${esc(p.bindIp)}</dd>` : ''}
+        <dt>Thresholds</dt><dd>${p.thresholds
+          ? `<span title="Good / Fair: download ≥ ${p.thresholds.downloadGood} / ${p.thresholds.downloadFair} Mbps, upload ≥ ${p.thresholds.uploadGood} / ${p.thresholds.uploadFair} Mbps, ping ≤ ${p.thresholds.pingGood} / ${p.thresholds.pingFair} ms">Custom</span><div class="cell-sub mono">good at ↓${p.thresholds.downloadGood} ↑${p.thresholds.uploadGood} Mbps, ${p.thresholds.pingGood} ms</div>`
+          : '<span class="muted">Default</span>'}</dd>
       </dl>
       <div class="nums">${l ? (l.status === 'ok'
         ? `<span style="color:var(--dl)">↓ ${fmtSpeed(l.download_mbps)}</span><span style="color:var(--ul)">↑ ${fmtSpeed(l.upload_mbps)}</span><span>${fmtMs(l.ping_ms)}</span>`
@@ -660,10 +670,23 @@ function openProfileEditor(profile) {
         </div>
       </div>
 
+      <div class="field"><span class="label">Quality thresholds</span>
+        <div class="inline" style="justify-content:space-between">
+          <span class="hint">Decide what counts as Good, Fair or Poor for this profile. A nearby server can be much faster than one in another country.</span>
+          <label class="inline" style="gap:8px;flex:none"><span class="hint">Use defaults</span><label class="toggle"><input type="checkbox" id="pThDefault" ${p.thresholds ? '' : 'checked'}/><span></span></label></label>
+        </div>
+        <div id="pTh" class="${p.thresholds ? '' : 'hidden'}" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+          <div class="threshold-row"><span></span><span class="label">Good</span><span class="label">Fair</span></div>
+          <div class="threshold-row"><span class="label">Download ≥ Mbps</span><input class="input" type="number" min="0" id="pThDlGood" /><input class="input" type="number" min="0" id="pThDlFair" /></div>
+          <div class="threshold-row"><span class="label">Upload ≥ Mbps</span><input class="input" type="number" min="0" id="pThUlGood" /><input class="input" type="number" min="0" id="pThUlFair" /></div>
+          <div class="threshold-row"><span class="label">Ping ≤ ms</span><input class="input" type="number" min="0" id="pThPingGood" /><input class="input" type="number" min="0" id="pThPingFair" /></div>
+        </div>
+      </div>
+
       <details>
         <summary class="label" style="cursor:pointer">Advanced network options</summary>
         <div class="row2" style="margin-top:12px">
-          <div class="field"><label for="pIface">Bind to interface</label><input class="input mono" id="pIface" placeholder="eth0, wg0…" value="${esc(p.interface)}" /><span class="hint">Passed as <code>--interface</code>. Needs host networking in Docker.</span></div>
+          <div class="field"><label for="pIface">Bind to interface</label><input class="input mono" id="pIface" list="pIfaceList" placeholder="eth0, wg0…" value="${esc(p.interface)}" /><datalist id="pIfaceList"></datalist><span class="hint">Passed as <code>--interface</code>. Needs host networking in Docker.</span></div>
           <div class="field"><label for="pIp">Bind to source IP</label><input class="input mono" id="pIp" placeholder="192.168.1.10" value="${esc(p.bindIp)}" /><span class="hint">Passed as <code>--ip</code>.</span></div>
         </div>
       </details>
@@ -769,6 +792,7 @@ function openProfileEditor(profile) {
       scheduleType: p.scheduleType, intervalMinutes: Number($('#pInterval').value), cron: p.cron,
       serverMode: p.serverMode, servers: p.serverMode === 'auto' ? [] : p.servers,
       interface: $('#pIface').value.trim(), bindIp: $('#pIp').value.trim(),
+      thresholds: $('#pThDefault').checked ? null : Object.fromEntries(TH_FIELDS.map(([el, k]) => [k, Number($(`#${el}`).value)])),
     };
     try {
       if (p.id) await api(`/api/profiles/${p.id}`, { method: 'PUT', body });
@@ -779,6 +803,16 @@ function openProfileEditor(profile) {
       if (state.view === 'profiles') renderProfileGrid(); else refreshDashboard();
     } catch (err) { toast(err.message, 'error'); }
   });
+
+  // thresholds: start from the profile's own values, or the defaults when it has none
+  const th = p.thresholds || state.settings;
+  for (const [el, k] of TH_FIELDS) $(`#${el}`).value = th[k];
+  $('#pThDefault').addEventListener('change', (e) => $('#pTh').classList.toggle('hidden', e.target.checked));
+  // suggest the interfaces the container can see
+  api('/api/network').then((n) => {
+    const list = $('#pIfaceList');
+    if (list) list.innerHTML = n.interfaces.filter((i) => !i.internal).map((i) => `<option value="${esc(i.name)}">`).join('');
+  }).catch(() => {});
 
   renderSched(); renderMode();
   $('#pName').focus();
@@ -855,10 +889,41 @@ $('#savedList').addEventListener('click', async (e) => {
 // ============================================================ settings page
 const SETTING_FIELDS = [['sDlGood', 'downloadGood'], ['sDlFair', 'downloadFair'], ['sUlGood', 'uploadGood'], ['sUlFair', 'uploadFair'],
   ['sPingGood', 'pingGood'], ['sPingFair', 'pingFair'], ['sTimeout', 'testTimeoutSeconds'], ['sRetention', 'retentionDays'], ['sRange', 'defaultRange']];
+const TH_FIELDS = [['pThDlGood', 'downloadGood'], ['pThDlFair', 'downloadFair'], ['pThUlGood', 'uploadGood'], ['pThUlFair', 'uploadFair'], ['pThPingGood', 'pingGood'], ['pThPingFair', 'pingFair']];
+
+async function renderNetwork() {
+  const el = $('#netInfo');
+  try {
+    const n = await api('/api/network');
+    const rows = n.interfaces.map((i) => `<tr>
+      <td><b class="mono">${esc(i.name)}</b>${i.defaultRoute ? ' <span class="tag">default route</span>' : ''}${i.internal ? ' <span class="tag">loopback</span>' : ''}</td>
+      <td class="mono wrap">${i.addresses.map((a) => `<div>${esc(a.cidr || a.address)} <span class="muted">${esc(a.family)}</span></div>`).join('')}</td>
+      <td class="mono muted">${esc(i.mac || '—')}</td>
+    </tr>`).join('');
+    const t = n.lastTest;
+    el.innerHTML = `
+      <div class="net-summary">
+        <div><div class="k">Public IP (last test)</div><div class="v mono">${t ? esc(t.externalIp || '—') : '—'}</div></div>
+        <div><div class="k">ISP</div><div class="v">${t ? esc(t.isp || '—') : '—'}</div></div>
+        <div><div class="k">Tested via</div><div class="v mono">${t ? `${esc(t.interface || '—')}${t.internalIp ? ` · ${esc(t.internalIp)}` : ''}` : '—'}</div></div>
+        <div><div class="k">Hostname</div><div class="v mono">${esc(n.hostname)}</div></div>
+      </div>
+      ${t ? `<div class="hint">From the latest successful test, ${ago(t.ts)}${t.isVpn ? ' (Ookla flagged it as a VPN)' : ''}.</div>` : '<div class="hint">Run a test to see your public IP and ISP.</div>'}
+      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Addresses</th><th>MAC</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="hint">${n.inContainer
+        ? 'These are the interfaces inside the container. With Docker\'s default bridge network you\'ll usually see only <code>eth0</code> and <code>lo</code>. To test through a host interface such as a VPN (<code>wg0</code>), run the container with host networking.'
+        : 'These are this machine\'s network interfaces.'} Use an interface name or address in a profile's advanced network options.</div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="hint">Couldn't load network info: ${esc(e.message)}</div>`;
+  }
+}
+
 function renderSettings() {
+  renderNetwork();
   for (const [el, k] of SETTING_FIELDS) $(`#${el}`).value = state.settings[k];
   $('#sPause').checked = !!state.settings.pauseAll;
 }
+$('#netRefresh').addEventListener('click', renderNetwork);
 $('#saveSettingsBtn').addEventListener('click', async () => {
   const body = { pauseAll: $('#sPause').checked };
   for (const [el, k] of SETTING_FIELDS) body[k] = $(`#${el}`).value;

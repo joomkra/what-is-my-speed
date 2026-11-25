@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import * as store from './db.js';
 import * as runner from './runner.js';
@@ -87,6 +88,33 @@ function profilesWithMeta() {
   return store.listProfiles().map((p) => ({ ...p, nextRun: scheduler.getNextRun(p.id), latest: latest.get(p.id) || null }));
 }
 
+// ---------- network info (what the container sees) ----------
+function defaultRouteInterfaces() {
+  // Linux only: /proc/net/route lists the IPv4 routes; destination 00000000 is the default route
+  try {
+    return new Set(fs.readFileSync('/proc/net/route', 'utf8').split('\n').slice(1)
+      .map((l) => l.trim().split(/\s+/)).filter((c) => c[1] === '00000000').map((c) => c[0]));
+  } catch { return new Set(); }
+}
+
+function getNetworkInfo() {
+  const defaults = defaultRouteInterfaces();
+  const interfaces = Object.entries(os.networkInterfaces()).map(([name, addrs]) => ({
+    name,
+    internal: addrs.every((a) => a.internal),
+    defaultRoute: defaults.has(name),
+    mac: addrs.find((a) => a.mac && a.mac !== '00:00:00:00:00:00')?.mac || null,
+    addresses: addrs.map((a) => ({ family: a.family, address: a.address, cidr: a.cidr })),
+  })).sort((a, b) => (b.defaultRoute - a.defaultRoute) || (a.internal - b.internal) || a.name.localeCompare(b.name));
+  const last = store.latestSuccessful();
+  return {
+    hostname: os.hostname(),
+    inContainer: fs.existsSync('/.dockerenv'),
+    interfaces,
+    lastTest: last ? { ts: last.ts, externalIp: last.external_ip, isp: last.isp, interface: last.interface_name, internalIp: last.internal_ip, isVpn: !!last.is_vpn } : null,
+  };
+}
+
 // ---------- SSE ----------
 const clients = new Set();
 function broadcast(event, data) {
@@ -120,6 +148,7 @@ async function api(req, res, url) {
     return;
   }
   if (p === '/api/state' && m === 'GET') return send(res, 200, runner.getState());
+  if (p === '/api/network' && m === 'GET') return send(res, 200, getNetworkInfo());
   if (p === '/api/version' && m === 'GET') {
     // ?quick=1 answers right away with the running version (no network wait)
     if (q.quick === '1' && !updateCache.data) return send(res, 200, { current: VERSION, status: 'checking', url: `https://github.com/${UPDATE_REPO}` });
